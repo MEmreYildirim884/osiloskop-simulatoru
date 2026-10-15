@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GDS-1102B Simülatörü</title>
+<meta name="description" content="GW Instek GDS-1102B osiloskop simülatörü, devre tezgâhı ve adım adım laboratuvar kılavuzu. Tarayıcıda çalışır.">
+<meta name="theme-color" content="#f08a1c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<!--
+  GW Instek GDS-1102B dijital depolamalı osiloskop simülatörü + devre tezgâhı + EE212 Lab 1 kılavuzu.
+  Tek dosya; harici kütüphane yok. Kaynak modüller: src/*.js  (build.js ile birleştirilir)
+  Modüller:  Units · MNA · Bench(model) · Sim · State · Acq · Measure · MathFn · Renderer · Menus · Panel · BenchUI · Tests · App · Guide
+  Referans: GDS-1000B Series User Manual (GW Instek). Kılavuzdan doğrulanamayan detaylar kodda "TAHMIN:" ile işaretlidir.
+-->
+<style>
+:root{
+  --bg:#1a1d22; --bg2:#23272e; --bg3:#2b3038; --fg:#e7eaee; --muted:#9aa3ad; --accent:#f08a1c; --accent2:#ffb25c;
+  --ch1:#ffe14a; --ch2:#4fc3ff; --math:#ff4a4a; --ref:#ffffff;
+  --panel-border:#383e47; --warn:#ff6a4a; --ok:#5fd17a; --info:#6fb6ff;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.45 "Segoe UI",system-ui,sans-serif}
+header{display:flex;align-items:center;gap:10px;padding:7px 14px;background:#121418;border-bottom:1px solid var(--panel-border);flex-wrap:wrap;position:sticky;top:0;z-index:40}
+header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.3px;white-space:nowrap}
+header h1 span{color:var(--accent)}
+header .sp{flex:1}
+header label{display:flex;align-items:center;gap:6px;color:var(--muted)}
+button.ui, select.ui{background:#2f353d;color:var(--fg);border:1px solid #4a525c;border-radius:6px;padding:5px 11px;font:inherit;cursor:pointer;transition:background .15s,border-color .15s,transform .08s}
+button.ui:hover, select.ui:hover{background:#3a414a;border-color:#6a737e}
+button.ui:active{transform:translateY(1px)}
+button.ui.primary{background:#8a4a0e;border-color:#c4701f}
+button.ui.primary:hover{background:#a2580f}
+button.ui.on{background:#24496f;border-color:#4f8fd0}
+button.ui.sm{padding:2px 8px;font-size:12px;border-radius:5px}
+kbd{background:#333a42;border:1px solid #59616b;border-bottom-width:2px;border-radius:4px;padding:0 5px;font:11px Consolas,monospace;color:#e8e8e8;white-space:nowrap}
+
+#layout{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:12px;padding:10px 12px 24px;align-items:start;transition:grid-template-columns .3s var(--ease)}
+#layout.noguide{grid-template-columns:minmax(0,1fr) 0px}
+#layout.noguide #guide{opacity:0;pointer-events:none}
+#leftCol{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+#scopeWrap{position:relative;width:min(100%, calc((100vh - 150px) * 1.935));min-width:min(100%,640px);max-width:1320px;user-select:none;-webkit-user-select:none}
+#scopeWrap svg{display:block;width:100%;height:auto}
+#screen{position:absolute;image-rendering:auto;background:#000}
+#hud{position:absolute;left:33.3%;top:16%;transform:translate(-50%,-6px);background:rgba(16,22,32,.88);border:1px solid #f08a1c;color:#fff;border-radius:8px;padding:5px 14px;font:600 15px "Segoe UI",Arial;pointer-events:none;opacity:0;transition:opacity .25s,transform .25s var(--ease);white-space:nowrap;box-shadow:0 4px 18px rgba(0,0,0,.5)}
+#hud.show{opacity:1;transform:translate(-50%,0)}
+#hud small{display:block;font-weight:400;font-size:11.5px;color:#ffc27a;text-align:center}
+
+/* Akıllı ipucu + klavye çubuğu */
+.bar{width:100%;max-width:1320px;display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--panel-border);border-radius:8px;padding:7px 12px;min-height:40px}
+#tipBar{transition:border-color .3s,background .3s}
+#tipBar.warn{border-color:#c4581f;background:#2e2420}
+#tipBar.good{border-color:#3f8a52}
+#tipIcon{font-size:18px;flex:none}
+#tipText{flex:1;transition:opacity .3s}
+#tipText b{color:var(--accent2)}
+#tipActs{display:flex;gap:6px;flex:none}
+
+/* Devre tezgâhı */
+#benchWrap{width:100%;max-width:1320px;background:var(--bg2);border:1px solid var(--panel-border);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:8px}
+#benchHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#benchHead h2{margin:0 6px 0 2px;font-size:14px;font-weight:600}
+#benchHead .hint{color:var(--muted);font-size:12px;flex:1;min-width:200px}
+#benchBody{display:grid;grid-template-columns:120px minmax(0,1fr) 290px;gap:8px}
+#palette{display:flex;flex-direction:column;gap:5px}
+#palette .pal{display:flex;align-items:center;gap:6px;padding:5px 6px;background:#323840;border:1px solid #474f59;border-radius:6px;cursor:grab;font-size:12px;transition:background .15s,transform .1s}
+#palette .pal:hover{background:#3d444d;transform:translateX(2px)}
+#palette .pal svg{width:34px;height:20px;flex:none}
+#palette .palHint{color:var(--muted);font-size:11px;margin-top:4px;line-height:1.35}
+#benchSvgBox{position:relative;background:#f4f1e8;border-radius:8px;overflow:hidden;min-height:440px}
+#benchSvg{width:100%;height:100%;display:block;min-height:440px;cursor:default}
+#props{background:var(--bg3);border:1px solid #444c56;border-radius:8px;padding:9px;font-size:12px;max-height:600px;overflow:auto}
+#props h3{margin:0 0 6px;font-size:13px}
+#props h4{margin:10px 0 4px;font-size:12px;color:var(--accent2)}
+#props label{display:flex;justify-content:space-between;align-items:center;gap:6px;margin:4px 0}
+#props input,#props select{width:128px;background:#1b1f24;color:var(--fg);border:1px solid #555;border-radius:4px;padding:3px 5px;font:inherit}
+#props input:focus,#props select:focus{outline:none;border-color:var(--accent)}
+#props input[type=range]{width:100%;accent-color:var(--accent)}
+#props .hint{color:var(--muted);margin-top:6px;line-height:1.4}
+#props .chips{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 6px}
+#props .chip{background:#1f242b;border:1px solid #4b535d;color:#dde;border-radius:12px;padding:1px 8px;font-size:11.5px;cursor:pointer;transition:background .15s}
+#props .chip:hover{background:#37404b}
+#props .chip.on{background:#8a4a0e;border-color:#e08a2c;color:#fff}
+#props .probeBox{border:1px solid #444c56;border-radius:6px;padding:6px;margin:6px 0;background:#252a31}
+#props .probeBox .ttl{font-weight:700;display:flex;justify-content:space-between;align-items:center}
+#props .probeBox select{width:150px}
+#benchWarn{position:absolute;left:8px;top:8px;right:8px;display:none;background:rgba(160,25,10,.92);color:#fff;padding:6px 10px;border-radius:6px;font-size:12.5px;pointer-events:none;z-index:3}
+#tip{position:fixed;z-index:50;pointer-events:none;background:rgba(18,20,24,.96);color:#fff;border:1px solid #f08a1c;border-radius:6px;padding:6px 9px;font-size:12px;max-width:320px;display:none;box-shadow:0 3px 12px rgba(0,0,0,.5)}
+#tip b{color:#ffc072}
+#tip .k{color:#9ccfff;margin-top:3px;display:block}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:60}
+#modal .box{background:#23282e;border:1px solid #555;border-radius:10px;max-width:880px;width:92%;max-height:86vh;overflow:auto;padding:16px 18px}
+#modal table{border-collapse:collapse;width:100%;font-size:12.5px}
+#modal td,#modal th{border-bottom:1px solid #3c434b;padding:5px 6px;text-align:left;vertical-align:top}
+#modal .pass{color:var(--ok);font-weight:700}
+#modal .fail{color:var(--warn);font-weight:700}
+
+/* Kılavuz paneli */
+#guide{position:sticky;top:56px;height:calc(100vh - 68px);display:flex;flex-direction:column;background:var(--bg2);border:1px solid var(--panel-border);border-radius:10px;overflow:hidden;transition:opacity .25s}
+#gTabs{display:flex;flex-wrap:wrap;gap:2px;padding:6px 6px 0;background:#1d2127;border-bottom:1px solid var(--panel-border)}
+#gTabs button{background:transparent;border:0;border-bottom:2px solid transparent;color:var(--muted);padding:6px 8px;font:600 12.5px "Segoe UI",Arial;cursor:pointer;border-radius:6px 6px 0 0;transition:color .15s,background .15s,border-color .2s}
+#gTabs button:hover{color:#fff;background:#2a2f37}
+#gTabs button.on{color:#fff;border-bottom-color:var(--accent);background:#2a2f37}
+#gBody{flex:1;overflow:auto;padding:12px 14px 30px;scroll-behavior:smooth}
+#gBody h2{font-size:16px;margin:4px 0 8px}
+#gBody h3{font-size:14px;margin:14px 0 6px;color:var(--accent2)}
+#gBody p{margin:6px 0}
+#gBody ul,#gBody ol{margin:6px 0;padding-left:20px}
+#gBody li{margin:3px 0}
+#gBody table{border-collapse:collapse;width:100%;font-size:12px;margin:6px 0}
+#gBody td,#gBody th{border-bottom:1px solid #3a4048;padding:4px 5px;text-align:left;vertical-align:top}
+#gBody th{color:var(--muted);font-weight:600}
+#gBody .fade{animation:fadeIn .3s var(--ease)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.gbox{border-radius:8px;padding:8px 10px;margin:8px 0;border:1px solid}
+.gbox.why{background:#1f2a36;border-color:#35506e}
+.gbox.why::before{content:"🤔 Neden? ";font-weight:700;color:#8fc4ff}
+.gbox.see{background:#1e2c22;border-color:#36603f}
+.gbox.see::before{content:"👀 Ekranda ne görmelisin? ";font-weight:700;color:#7fe095}
+.gbox.warn{background:#2e2420;border-color:#7a4423}
+.gbox.warn::before{content:"⚠️ Dikkat: ";font-weight:700;color:#ffaa70}
+.gbox.tip{background:#2a2720;border-color:#6b5a2a}
+.gbox.tip::before{content:"💡 İpucu: ";font-weight:700;color:#ffd36a}
+.gbox.simple{background:#262033;border-color:#57487a}
+.gbox.simple::before{content:"🧸 Çok basitçe: ";font-weight:700;color:#c9b2ff}
+.steps{counter-reset:st;list-style:none;padding-left:0 !important}
+.steps>li{counter-increment:st;position:relative;padding:6px 8px 6px 34px;margin:5px 0;background:#272c34;border:1px solid #39404a;border-radius:7px;transition:border-color .2s,background .2s}
+.steps>li::before{content:counter(st);position:absolute;left:8px;top:6px;width:19px;height:19px;border-radius:50%;background:#3a414b;color:#fff;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center}
+.steps>li.done{border-color:#3f8a52;background:#22302a}
+.steps>li.done::before{content:"✓";background:#3f8a52}
+.acts{display:inline-flex;gap:4px;margin-left:4px;vertical-align:middle}
+.acts button{font-size:11px;padding:1px 7px;border-radius:10px;background:#1f2a36;border:1px solid #3e6189;color:#cfe4ff;cursor:pointer;transition:background .15s}
+.acts button:hover{background:#2b3d52}
+.acts button.do{background:#3a2a17;border-color:#9a6224;color:#ffd7a8}
+.acts button.do:hover{background:#4d3720}
+.live{display:inline-block;background:#111;border:1px solid #444;border-radius:5px;padding:0 6px;font:12px Consolas,monospace;color:#9fffb5;min-width:60px}
+.live.bad{color:#ff9a7a}
+.chk{display:inline-block;width:16px;height:16px;border-radius:50%;background:#444;color:#fff;text-align:center;font-size:11px;line-height:16px;margin-right:4px}
+.chk.ok{background:#3f8a52}
+#stepNav{display:flex;align-items:center;gap:6px;margin:4px 0 10px;flex-wrap:wrap}
+#stepNav .dots{display:flex;gap:2px;flex-wrap:wrap;flex:1}
+#stepNav .dot{min-width:20px;height:20px;padding:0 3px;border-radius:10px;font-size:9.5px !important;background:#2f353d;border:1px solid #4a525c;color:#ccc;font-size:10.5px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s}
+#stepNav .dot.on{background:var(--accent);border-color:#ffb25c;color:#000;font-weight:700;transform:scale(1.12)}
+#stepNav .dot.k-task{border-color:#c4701f;color:#ffd7a8}
+#stepNav .dot.k-prep{color:#9ab}
+#stepNav .dot.k-bonus{border-style:dashed}
+.stepHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 0}
+.stepHead .goes{color:var(--muted);font-size:12px}
+.stepHead .goes b{color:#ffd7a8}
+.kind{display:inline-block;border-radius:5px;padding:1px 8px;font-size:11px;font-weight:800;letter-spacing:.5px}
+.kind.task{background:#c4701f;color:#fff}
+.kind.prep{background:#3a4a5e;color:#cfe4ff}
+.kind.start,.kind.end{background:#3f8a52;color:#fff}
+.kind.bonus{background:#57487a;color:#fff}
+#stepNav .dot.ok{border-color:#3f8a52;box-shadow:0 0 0 2px #3f8a5255}
+.recipe{border:1px solid #3a4048;border-radius:8px;margin:6px 0;background:#252a31;overflow:hidden}
+.recipe summary{cursor:pointer;padding:7px 10px;font-weight:600;list-style:none;display:flex;gap:8px;align-items:center}
+.recipe summary::-webkit-details-marker{display:none}
+.recipe summary::before{content:"▸";transition:transform .2s;color:var(--accent)}
+.recipe[open] summary::before{transform:rotate(90deg)}
+.recipe[open] summary{background:#2c323a}
+.recipe .in{padding:4px 12px 10px}
+.keyrow{display:flex;gap:8px;align-items:flex-start;padding:5px 4px;border-bottom:1px solid #333a42;cursor:pointer;border-radius:4px;transition:background .15s}
+.keyrow:hover{background:#2c323a}
+.keyrow .kn{min-width:120px;font-weight:700;color:#fff}
+.keyrow .kd{flex:1;color:#cdd3da}
+.keyrow .ks{flex:none}
+table.lab input{width:72px;background:#15181c;color:#fff;border:1px solid #4a525c;border-radius:4px;padding:2px 4px;font:12px Consolas,monospace}
+table.lab td.th{color:#9ccfff;font-family:Consolas,monospace}
+table.lab td.err{font-family:Consolas,monospace}
+.good{color:var(--ok)} .bad{color:var(--warn)}
+.calc{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center;background:#1d2127;border:1px solid #3a4048;border-radius:8px;padding:8px 10px}
+.calc input{width:90px;background:#15181c;color:#fff;border:1px solid #4a525c;border-radius:4px;padding:2px 5px}
+.calc b{font-family:Consolas,monospace;color:#9fffb5;font-weight:400}
+.formula{font-family:Cambria,Georgia,serif;font-size:14px;background:#15181c;border:1px solid #3a4048;border-radius:6px;padding:6px 10px;margin:6px 0;text-align:center}
+
+header h1 .ver{color:var(--muted);font-weight:400;font-size:11px;margin-left:4px}
+#updBar{position:fixed;left:50%;bottom:18px;transform:translate(-50%,140%);display:flex;gap:10px;align-items:center;background:#23282e;border:1px solid var(--accent);border-radius:10px;padding:8px 12px;box-shadow:0 6px 24px rgba(0,0,0,.6);z-index:80;transition:transform .35s var(--ease)}
+#updBar.show{transform:translate(-50%,0)}
+/* Devre seçici + kütüphane */
+.cnav{display:inline-flex;align-items:center;gap:3px}
+#curName{max-width:330px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+#modal .box.lib{max-width:1100px;width:94%}
+.libHead{display:flex;justify-content:space-between;align-items:center}
+.libHead h2{margin:0}
+#modal .box h3{margin:16px 0 8px;font-size:14px;color:var(--accent2)}
+#modal .box h3 small{color:var(--muted);font-weight:400}
+.muted{color:var(--muted)}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.ccard{position:relative;background:#2a2f37;border:1px solid #444c56;border-left:4px solid #6a7480;border-radius:8px;padding:8px 10px;cursor:pointer;transition:transform .12s,border-color .15s,background .15s;margin:4px 0}
+.ccard:hover{transform:translateY(-2px);background:#323842;border-color:#7a8592}
+.ccard.lab{border-left-color:#f0b22a}.ccard.learn{border-left-color:#4fc3ff}.ccard.test{border-left-color:#c084fc}.ccard.other{border-left-color:#888}
+.ccard.cur{box-shadow:0 0 0 2px var(--accent)}
+.ccard .ct{font-weight:700;font-size:13px}
+.ccard .ck{color:#b9c4d0;font-size:12px;margin-top:2px}
+.ccard .cf{color:var(--muted);font-size:11.5px;margin-top:3px}
+.ccard .cst{position:absolute;top:6px;right:8px;font-size:10.5px;background:#3a414b;border-radius:8px;padding:0 6px;color:#ddd}
+.ccard .cst.ok{background:#3f8a52;color:#fff}
+.kind.test{background:#7c4dbb;color:#fff}
+/* Ekran açıklama işaretleri (!) */
+#infoLayer{position:absolute;pointer-events:none;z-index:5}
+#infoLayer.off{display:none}
+.ibadge{position:absolute;transform:translate(-50%,-50%);width:17px;height:17px;border-radius:50%;border:1.5px solid #fff;background:#f08a1c;color:#fff;font:900 11px/14px Arial;text-align:center;padding:0;cursor:pointer;pointer-events:auto;box-shadow:0 0 0 2px rgba(240,138,28,.35),0 2px 6px rgba(0,0,0,.6);opacity:.88;transition:transform .15s,opacity .15s}
+.ibadge:hover{transform:translate(-50%,-50%) scale(1.25);opacity:1}
+.ibadge.pulse{animation:ipulse 2.2s ease-in-out 3}
+@keyframes ipulse{0%,100%{box-shadow:0 0 0 2px rgba(240,138,28,.35)}50%{box-shadow:0 0 0 7px rgba(240,138,28,.0),0 0 12px rgba(240,138,28,.9)}}
+#modal .box.info{max-width:760px}
+.info h2{margin:0 0 6px}
+.info .row{display:grid;grid-template-columns:minmax(150px,auto) 1fr;gap:4px 12px;border-bottom:1px solid #3a4048;padding:6px 2px}
+.info .row code{font:13px Consolas,monospace;color:#ffe9a8;background:#15181c;border:1px solid #3a4048;border-radius:4px;padding:1px 6px;align-self:start}
+.info .row .d b{color:#fff}
+.info .scr{font:13px Consolas,monospace;background:#0b0d10;border:1px solid #444;border-radius:6px;padding:8px 10px;white-space:pre;color:#e8e8e8;overflow:auto}
+.ihelp{display:inline-block;width:16px;height:16px;border-radius:50%;background:#f08a1c;color:#fff;font:900 10px/16px Arial;text-align:center;cursor:pointer;margin-left:4px;vertical-align:middle}
+
+/* Panel tuşları */
+.btn{cursor:pointer}
+.btn .cap{transition:transform .07s}
+.btn.pressed .cap{transform:translate(0px,1.6px)}
+.btn.pressed .face{filter:brightness(.82)}
+.btn:hover .face{filter:brightness(1.04)}
+.knob{cursor:grab}
+.knob:active{cursor:grabbing}
+.knob .rot{transition:transform .12s ease-out}
+.knobRing{fill:none;stroke:#f08a1c;stroke-width:2.5;opacity:0;transition:opacity .25s}
+.knob.active .knobRing{opacity:.95}
+.hlRing{fill:none;stroke:#ff7a00;stroke-width:4;pointer-events:none;animation:hl 1s ease-in-out infinite}
+@keyframes hl{0%,100%{opacity:.25;stroke-width:3}50%{opacity:1;stroke-width:6}}
+.bench-comp{cursor:move}
+.bench-pin{cursor:crosshair;transition:fill .12s}
+.bench-pin:hover{fill:#f08a1c}
+.probe-h{cursor:grab}
+.netTag{pointer-events:none}
+
+@media (max-width:1150px){
+  #layout{grid-template-columns:1fr}
+  #layout.noguide #guide{display:none}
+  #guide{position:relative;top:0;height:auto;max-height:none}
+  #benchBody{grid-template-columns:100px minmax(0,1fr)}
+  #props{grid-column:1/-1}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1><span>GW INSTEK</span> GDS-1102B · Osiloskop Simülatörü <small class="ver" title="Derleme: __BUILD_TIME__">v__APP_VERSION__</small></h1>
+  <button class="ui primary" id="libBtn" title="Tüm devreler: Lab 1, öğretmeli devreler, test devreleri">📚 Devreler</button>
+  <span class="cnav"><button class="ui sm" id="prevC" title="Önceki devre">◀</button><button class="ui" id="curName" title="Devre kütüphanesini aç">—</button><button class="ui sm" id="nextC" title="Sonraki devre">▶</button></span>
+  <span class="sp"></span>
+  <button class="ui on" id="btnGuide" title="Kılavuz panelini aç/kapat">📘 Kılavuz</button>
+  <button class="ui on" id="btnInfo" title="Ekrandaki ! açıklama işaretlerini aç/kapat">❗ İşaretler</button>
+  <button class="ui" id="btnInstall" style="display:none" title="Uygulamayı bilgisayarına/telefonuna yükle">⬇ Uygulamayı yükle</button>
+  <button class="ui" id="btnTests">Doğruluk testleri</button>
+</header>
+<div id="layout">
+  <div id="leftCol">
+    <div id="scopeWrap">
+      <!-- Ön panel SVG'si Panel modülü tarafından oluşturulur -->
+      <canvas id="screen" width="800" height="480"></canvas>
+      <div id="hud"></div>
+      <div id="infoLayer"></div>
+    </div>
+    <div class="bar" id="tipBar"><span id="tipIcon">💡</span><span id="tipText"></span><span id="tipActs"></span></div>
+    <section id="benchWrap">
+      <div id="benchHead">
+        <h2>🔌 Devre Tezgâhı</h2>
+        <button class="ui sm" id="bUndo" title="Son değişikliği geri al">↶ Geri al</button>
+        <button class="ui sm" id="bRedo" title="Geri alınanı yeniden yap">↷ Yinele</button>
+        <button class="ui sm" id="bRot" title="Seçili bileşeni 90° döndür">⟳ Döndür</button>
+        <button class="ui sm" id="bDel" title="Seçili bileşeni/kabloyu sil">🗑 Sil</button>
+        <span class="hint">Paletten sürükle-bırak · bir uca tıkla, sonra diğer uca tıkla = kablo · bileşene tıkla: değerleri sağda · değer kutusunun üstünde tekerlek: değeri değiştir</span>
+      </div>
+      <div id="benchBody">
+        <div id="palette"></div>
+        <div id="benchSvgBox"><div id="benchWarn"></div><svg id="benchSvg" viewBox="0 0 1000 460"></svg></div>
+        <div id="props"></div>
+      </div>
+    </section>
+  </div>
+  <aside id="guide">
+    <nav id="gTabs"></nav>
+    <div id="gBody"></div>
+  </aside>
+</div>
+<div id="updBar"><span>🆕 Yeni sürüm hazır.</span><button class="ui primary" id="updBtn">Şimdi güncelle</button><button class="ui sm" id="updLater">Sonra</button></div>
+<div id="tip"></div>
+<div id="modal"><div class="box" id="modalBox"></div></div>
+<script>
+"use strict";

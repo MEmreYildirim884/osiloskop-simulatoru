@@ -1,0 +1,7 @@
+node_modules/
+*.docx
+*.log
+zz_*
+.DS_Store
+Thumbs.db
+src copy/

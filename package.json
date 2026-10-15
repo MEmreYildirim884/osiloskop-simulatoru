@@ -1,0 +1,12 @@
+{
+  "name": "osiloskop-simulatoru",
+  "version": "1.0.0",
+  "description": "GW Instek GDS-1102B osiloskop simülatörü + devre tezgâhı + EE212 Lab kılavuzu (tarayıcıda çalışır, kurulum gerektirmez)",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "release:patch": "npm version patch --no-git-tag-version && node build.js",
+    "release:minor": "npm version minor --no-git-tag-version && node build.js"
+  },
+  "license": "MIT"
+}
