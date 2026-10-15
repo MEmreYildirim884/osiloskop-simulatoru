@@ -285,6 +285,7 @@ const App = (() => {
     if (Guide.circuit !== 'wien') { loadPreset(Guide.circuit); State.set(State.defaults()); Sim.refilterTrig(); BenchUI.render(); }
     Guide.init();
     Info.init();
+    View.init();
     document.getElementById('btnTests').onclick = () => Tests.runUi();
     document.getElementById('btnGuide').onclick = () => Guide.toggle();
     document.getElementById('modal').addEventListener('click', e => { if (e.target.id === 'modal') { e.target.style.display = 'none'; const b = document.getElementById('modalBox'); b.className = 'box'; b.onclick = null; } });

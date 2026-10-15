@@ -41,7 +41,17 @@ kbd{background:#333a42;border:1px solid #59616b;border-bottom-width:2px;border-r
 #layout{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:12px;padding:10px 12px 24px;align-items:start;transition:grid-template-columns .3s var(--ease)}
 #layout.noguide{grid-template-columns:minmax(0,1fr) 0px}
 #layout.noguide #guide{opacity:0;pointer-events:none}
-#leftCol{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+#leftCol{display:flex;flex-direction:column;align-items:safe center;gap:8px;min-width:0;overflow-x:auto}
+#viewBar{flex-wrap:wrap;gap:5px;padding:4px 10px;min-height:0;font-size:12px;color:var(--muted)}
+#viewBar .vl{color:#cdd3da;font-weight:600;margin-right:2px}
+#viewBar .vz{min-width:42px;text-align:center;color:#fff;font:12px Consolas,monospace}
+#viewBar .vsep{flex:1}
+#scopeWrap:fullscreen{width:min(100vw, calc(100vh * 1.935)) !important;margin:auto;background:#111;display:block}
+#scopeWrap:fullscreen svg{height:100%}
+#lens{position:absolute;display:none;border-radius:50%;border:3px solid #f08a1c;box-shadow:0 6px 24px rgba(0,0,0,.7);pointer-events:none;z-index:6}
+.zgrp{display:inline-flex;align-items:center;gap:2px;margin-left:6px;padding-left:8px;border-left:1px solid #444c56}
+#bZlbl{min-width:40px;text-align:center;font:12px Consolas,monospace;color:#fff}
+#benchSvg.active{outline:2px solid rgba(240,138,28,.45);outline-offset:-2px}
 #scopeWrap{position:relative;width:min(100%, calc((100vh - 150px) * 1.935));min-width:min(100%,640px);max-width:1320px;user-select:none;-webkit-user-select:none}
 #scopeWrap svg{display:block;width:100%;height:auto}
 #screen{position:absolute;image-rendering:auto;background:#000}
@@ -262,6 +272,7 @@ header h1 .ver{color:var(--muted);font-weight:400;font-size:11px;margin-left:4px
       <div id="hud"></div>
       <div id="infoLayer"></div>
     </div>
+    <div class="bar" id="viewBar"></div>
     <div class="bar" id="tipBar"><span id="tipIcon">💡</span><span id="tipText"></span><span id="tipActs"></span></div>
     <section id="benchWrap">
       <div id="benchHead">
@@ -270,7 +281,8 @@ header h1 .ver{color:var(--muted);font-weight:400;font-size:11px;margin-left:4px
         <button class="ui sm" id="bRedo" title="Geri alınanı yeniden yap">↷ Yinele</button>
         <button class="ui sm" id="bRot" title="Seçili bileşeni 90° döndür">⟳ Döndür</button>
         <button class="ui sm" id="bDel" title="Seçili bileşeni/kabloyu sil">🗑 Sil</button>
-        <span class="hint">Paletten sürükle-bırak · bir uca tıkla, sonra diğer uca tıkla = kablo · bileşene tıkla: değerleri sağda · değer kutusunun üstünde tekerlek: değeri değiştir</span>
+        <span class="zgrp"><button class="ui sm" id="bZout" title="Uzaklaştır">−</button><span id="bZlbl">100%</span><button class="ui sm" id="bZin" title="Yakınlaştır">+</button><button class="ui sm" id="bZfit" title="Tüm devreyi göster">⤢</button></span>
+        <span class="hint">Paletten sürükle-bırak · bir uca tıkla, sonra diğer uca tıkla = kablo · bileşene tıkla: değerleri sağda · <b>yakınlaştırma:</b> tezgâha bir kez tıkla, sonra tekerlek · boş yeri sürükle = kaydır</span>
       </div>
       <div id="benchBody">
         <div id="palette"></div>

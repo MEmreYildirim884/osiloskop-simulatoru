@@ -41,7 +41,17 @@ kbd{background:#333a42;border:1px solid #59616b;border-bottom-width:2px;border-r
 #layout{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:12px;padding:10px 12px 24px;align-items:start;transition:grid-template-columns .3s var(--ease)}
 #layout.noguide{grid-template-columns:minmax(0,1fr) 0px}
 #layout.noguide #guide{opacity:0;pointer-events:none}
-#leftCol{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+#leftCol{display:flex;flex-direction:column;align-items:safe center;gap:8px;min-width:0;overflow-x:auto}
+#viewBar{flex-wrap:wrap;gap:5px;padding:4px 10px;min-height:0;font-size:12px;color:var(--muted)}
+#viewBar .vl{color:#cdd3da;font-weight:600;margin-right:2px}
+#viewBar .vz{min-width:42px;text-align:center;color:#fff;font:12px Consolas,monospace}
+#viewBar .vsep{flex:1}
+#scopeWrap:fullscreen{width:min(100vw, calc(100vh * 1.935)) !important;margin:auto;background:#111;display:block}
+#scopeWrap:fullscreen svg{height:100%}
+#lens{position:absolute;display:none;border-radius:50%;border:3px solid #f08a1c;box-shadow:0 6px 24px rgba(0,0,0,.7);pointer-events:none;z-index:6}
+.zgrp{display:inline-flex;align-items:center;gap:2px;margin-left:6px;padding-left:8px;border-left:1px solid #444c56}
+#bZlbl{min-width:40px;text-align:center;font:12px Consolas,monospace;color:#fff}
+#benchSvg.active{outline:2px solid rgba(240,138,28,.45);outline-offset:-2px}
 #scopeWrap{position:relative;width:min(100%, calc((100vh - 150px) * 1.935));min-width:min(100%,640px);max-width:1320px;user-select:none;-webkit-user-select:none}
 #scopeWrap svg{display:block;width:100%;height:auto}
 #screen{position:absolute;image-rendering:auto;background:#000}
@@ -245,7 +255,7 @@ header h1 .ver{color:var(--muted);font-weight:400;font-size:11px;margin-left:4px
 </head>
 <body>
 <header>
-  <h1><span>GW INSTEK</span> GDS-1102B · Osiloskop Simülatörü <small class="ver" title="Derleme: 2026-10-15 14:24">v1.0.0</small></h1>
+  <h1><span>GW INSTEK</span> GDS-1102B · Osiloskop Simülatörü <small class="ver" title="Derleme: 2026-10-15 14:39">v1.1.0</small></h1>
   <button class="ui primary" id="libBtn" title="Tüm devreler: Lab 1, öğretmeli devreler, test devreleri">📚 Devreler</button>
   <span class="cnav"><button class="ui sm" id="prevC" title="Önceki devre">◀</button><button class="ui" id="curName" title="Devre kütüphanesini aç">—</button><button class="ui sm" id="nextC" title="Sonraki devre">▶</button></span>
   <span class="sp"></span>
@@ -262,6 +272,7 @@ header h1 .ver{color:var(--muted);font-weight:400;font-size:11px;margin-left:4px
       <div id="hud"></div>
       <div id="infoLayer"></div>
     </div>
+    <div class="bar" id="viewBar"></div>
     <div class="bar" id="tipBar"><span id="tipIcon">💡</span><span id="tipText"></span><span id="tipActs"></span></div>
     <section id="benchWrap">
       <div id="benchHead">
@@ -270,7 +281,8 @@ header h1 .ver{color:var(--muted);font-weight:400;font-size:11px;margin-left:4px
         <button class="ui sm" id="bRedo" title="Geri alınanı yeniden yap">↷ Yinele</button>
         <button class="ui sm" id="bRot" title="Seçili bileşeni 90° döndür">⟳ Döndür</button>
         <button class="ui sm" id="bDel" title="Seçili bileşeni/kabloyu sil">🗑 Sil</button>
-        <span class="hint">Paletten sürükle-bırak · bir uca tıkla, sonra diğer uca tıkla = kablo · bileşene tıkla: değerleri sağda · değer kutusunun üstünde tekerlek: değeri değiştir</span>
+        <span class="zgrp"><button class="ui sm" id="bZout" title="Uzaklaştır">−</button><span id="bZlbl">100%</span><button class="ui sm" id="bZin" title="Yakınlaştır">+</button><button class="ui sm" id="bZfit" title="Tüm devreyi göster">⤢</button></span>
+        <span class="hint">Paletten sürükle-bırak · bir uca tıkla, sonra diğer uca tıkla = kablo · bileşene tıkla: değerleri sağda · <b>yakınlaştırma:</b> tezgâha bir kez tıkla, sonra tekerlek · boş yeri sürükle = kaydır</span>
       </div>
       <div id="benchBody">
         <div id="palette"></div>
@@ -3187,6 +3199,9 @@ const BenchUI = (() => {
   let drag = null;           // sürükleme durumu
   let wiring = null;         // {from:{c,p}, x, y}
   let hoverPin = null;       // kablo/prob sürüklerken yakalanacak pin
+  // görünüm (yakınlaştırma/kaydırma): SVG viewBox
+  const VB0 = { x: 0, y: 0, w: 1000, h: 460 };
+  let view = { ...VB0 }, pan = null, benchActive = false;
   let lastPropsKey = '';
   const SNAP = 20;
   const ANCHOR = [[1000, 70], [1000, 210]], EXT_ANCHOR = [1000, 380];
@@ -3220,6 +3235,16 @@ const BenchUI = (() => {
     svg.addEventListener('dblclick', onDbl);
     svg.addEventListener('pointerover', onHover);
     svg.addEventListener('pointerout', () => Panel.hideTip());
+    // yakınlaştırma: tezgâha bir kez tıkladıktan sonra fare tekerleği (sayfa kaydırmasını bozmasın diye)
+    svg.addEventListener('pointerleave', () => { benchActive = false; svg.classList.remove('active'); });
+    svg.addEventListener('wheel', e => {
+      if (!benchActive) return;
+      e.preventDefault();
+      zoomAt(pt(e), e.deltaY < 0 ? 1 / 1.15 : 1.15);
+    }, { passive: false });
+    document.getElementById('bZin').onclick = () => zoomAt([view.x + view.w / 2, view.y + view.h / 2], 1 / 1.25);
+    document.getElementById('bZout').onclick = () => zoomAt([view.x + view.w / 2, view.y + view.h / 2], 1.25);
+    document.getElementById('bZfit').onclick = () => { view = { ...VB0 }; applyView(); };
     document.getElementById('bUndo').onclick = undo;
     document.getElementById('bRedo').onclick = redo;
     document.getElementById('bRot').onclick = rotateSel;
@@ -3402,6 +3427,7 @@ const BenchUI = (() => {
     m.probes.forEach((p, i) => s += probeSvg(p, i));
     s += extSvg();
     svg.innerHTML = s;
+    applyView();
     renderWarn();
     renderProps(false, skipProps);
     document.getElementById('bUndo').disabled = !undoStack.length;
@@ -3552,8 +3578,18 @@ const BenchUI = (() => {
     });
     return best;
   }
+  function zoomAt([px, py], f) {
+    const nw = Math.max(250, Math.min(2000, view.w * f)), r = nw / view.w;
+    view = { x: px - (px - view.x) * r, y: py - (py - view.y) * r, w: nw, h: nw * VB0.h / VB0.w };
+    applyView();
+  }
+  function applyView() {
+    svg.setAttribute('viewBox', `${view.x.toFixed(1)} ${view.y.toFixed(1)} ${view.w.toFixed(1)} ${view.h.toFixed(1)}`);
+    const z = document.getElementById('bZlbl'); if (z) z.textContent = Math.round(VB0.w / view.w * 100) + '%';
+  }
   function onDown(e) {
     const t = e.target;
+    benchActive = true; svg.classList.add('active');
     const [x, y] = pt(e);
     Panel.hideTip();
     const sw = t.closest('.probe-sw');
@@ -3581,12 +3617,18 @@ const BenchUI = (() => {
       drag = { kind: 'comp', c, dx: c.x - x, dy: c.y - y, moved: false, snap: B.snapshot() };
       render(); e.preventDefault(); return;
     }
-    // boş alana tıklama
-    if (wiring) { wiring = null; hoverPin = null; }
-    sel = null; render();
+    // boş alana basma: sürüklenirse görünüm kayar, sürüklenmezse seçim kalkar
+    pan = { sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y, k: 1 / svg.getScreenCTM().a, moved: false };
+    e.preventDefault();
   }
   function onMove(e) {
     if (palDrag) { movePal(e); return; }
+    if (pan) {
+      const dx = e.clientX - pan.sx, dy = e.clientY - pan.sy;
+      if (!pan.moved && Math.hypot(dx, dy) > 4) { pan.moved = true; svg.style.cursor = 'grabbing'; }
+      if (pan.moved) { view.x = pan.vx - dx * pan.k; view.y = pan.vy - dy * pan.k; applyView(); }
+      return;
+    }
     if (!drag && !wiring) return;
     const [x, y] = pt(e);
     if (wiring) {
@@ -3608,6 +3650,11 @@ const BenchUI = (() => {
   }
   function onUp(e) {
     if (palDrag) { dropPal(e); return; }
+    if (pan) {
+      const moved = pan.moved; pan = null; svg.style.cursor = '';
+      if (!moved) { if (wiring) { wiring = null; hoverPin = null; } sel = null; render(); }
+      return;
+    }
     if (wiring) {
       const [x, y] = pt(e);
       const p = nearestPin(x, y, 14);
@@ -4096,6 +4143,7 @@ const App = (() => {
     if (Guide.circuit !== 'wien') { loadPreset(Guide.circuit); State.set(State.defaults()); Sim.refilterTrig(); BenchUI.render(); }
     Guide.init();
     Info.init();
+    View.init();
     document.getElementById('btnTests').onclick = () => Tests.runUi();
     document.getElementById('btnGuide').onclick = () => Guide.toggle();
     document.getElementById('modal').addEventListener('click', e => { if (e.target.id === 'modal') { e.target.style.display = 'none'; const b = document.getElementById('modalBox'); b.className = 'box'; b.onclick = null; } });
@@ -5390,6 +5438,104 @@ const Info = (() => {
   };
 
   return { init, tick, open, TOPIC };
+})();
+
+/* =====================================================================
+ * View — görünüm araçları (osiloskobun kendisine dokunmaz)
+ *   - Osiloskop boyutu: 🔍− / 🔍+ (%60–%250), Sığdır, Tam ekran
+ *   - Büyüteç: ekranın üstünde gezdirince o bölgeyi 3× büyüten mercek
+ *   - Kılavuz yazı boyutu: A− / A+
+ *   Tercihler tarayıcıda saklanır.
+ * ===================================================================== */
+const View = (() => {
+  const LS = 'gds.view';
+  const st = Object.assign({ z: 1, lens: false, gz: 1 }, (() => { try { return JSON.parse(localStorage.getItem(LS) || '{}'); } catch (e) { return {}; } })());
+  const save = () => { try { localStorage.setItem(LS, JSON.stringify(st)); } catch (e) { } };
+  const ZS = [0.6, 0.7, 0.8, 0.9, 1, 1.15, 1.3, 1.5, 1.75, 2, 2.5];
+  let wrap, bar, lens, lctx, scr;
+
+  function init() {
+    wrap = document.getElementById('scopeWrap'); bar = document.getElementById('viewBar'); scr = document.getElementById('screen');
+    bar.innerHTML = `<span class="vl">🔍 Osiloskop</span>
+      <button class="ui sm" data-v="out" title="Küçült">−</button><span class="vz" id="vzLbl"></span><button class="ui sm" data-v="in" title="Büyüt">+</button>
+      <button class="ui sm" data-v="fit" title="Pencereye sığdır">⤢ Sığdır</button>
+      <button class="ui sm" data-v="full" title="Osiloskobu tam ekran yap (çıkmak için tekrar bas)">⛶ Tam ekran</button>
+      <button class="ui sm" data-v="lens" id="vLens" title="Ekranın üstünde gezdirince 3× büyütür — imleçleri tam oturtmak için">🔎 Büyüteç</button>
+      <span class="vsep"></span>
+      <span class="vl">📘 Kılavuz yazısı</span><button class="ui sm" data-v="gout" title="Kılavuz yazısını küçült">A−</button><button class="ui sm" data-v="gin" title="Kılavuz yazısını büyüt">A+</button>`;
+    bar.addEventListener('click', onBar);
+    lens = document.createElement('canvas'); lens.id = 'lens'; wrap.appendChild(lens);
+    lctx = lens.getContext('2d');
+    wrap.addEventListener('pointermove', onLensMove);
+    wrap.addEventListener('pointerleave', () => { lens.style.display = 'none'; lensPos = null; });
+    window.addEventListener('resize', apply);
+    document.addEventListener('fullscreenchange', apply);
+    apply();
+  }
+  function onBar(e) {
+    const b = e.target.closest('[data-v]'); if (!b) return;
+    const v = b.dataset.v;
+    let i = ZS.indexOf(st.z); if (i < 0) i = 4;
+    if (v === 'in') st.z = ZS[Math.min(ZS.length - 1, i + 1)];
+    if (v === 'out') st.z = ZS[Math.max(0, i - 1)];
+    if (v === 'fit') st.z = 1;
+    if (v === 'full') { if (document.fullscreenElement) document.exitFullscreen(); else wrap.requestFullscreen && wrap.requestFullscreen().catch(() => { }); }
+    if (v === 'lens') st.lens = !st.lens;
+    if (v === 'gin') st.gz = Math.min(1.6, +(st.gz + 0.1).toFixed(2));
+    if (v === 'gout') st.gz = Math.max(0.8, +(st.gz - 0.1).toFixed(2));
+    save(); apply();
+    if (v === 'in' || v === 'out') wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+  /** Osiloskobun piksel genişliği: "sığdır" boyutu × yakınlaştırma */
+  function apply() {
+    const full = !!document.fullscreenElement;
+    if (full) { wrap.style.width = ''; }
+    else {
+      const lc = document.getElementById('leftCol');
+      const fit = Math.max(Math.min(640, lc.clientWidth), Math.min(lc.clientWidth, 1320, (window.innerHeight - 150) * 1.935));
+      wrap.style.width = Math.round(fit * st.z) + 'px';
+    }
+    wrap.style.maxWidth = 'none'; wrap.style.minWidth = '0';
+    document.getElementById('vzLbl').textContent = Math.round(st.z * 100) + '%';
+    document.getElementById('vLens').classList.toggle('on', st.lens);
+    bar.querySelector('[data-v="full"]').textContent = full ? '✕ Tam ekrandan çık' : '⛶ Tam ekran';
+    const gb = document.getElementById('gBody'); if (gb) gb.style.zoom = st.gz;
+    if (!st.lens) lens.style.display = 'none';
+  }
+
+  /* ---------------- büyüteç ---------------- */
+  const LZ = 3, LS_PX = 230;
+  let lensPos = null, raf = 0;
+  function onLensMove(e) {
+    if (!st.lens) return;
+    const r = scr.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) { lens.style.display = 'none'; lensPos = null; return; }
+    lensPos = { x: e.clientX, y: e.clientY };
+    const wr = wrap.getBoundingClientRect();
+    lens.style.display = 'block';
+    lens.style.left = (e.clientX - wr.left - LS_PX / 2) + 'px';
+    lens.style.top = (e.clientY - wr.top - LS_PX / 2) + 'px';
+    if (!raf) raf = requestAnimationFrame(drawLens);
+  }
+  function drawLens() {
+    raf = 0;
+    if (!lensPos || !st.lens) return;
+    const dpr = window.devicePixelRatio || 1, px = Math.round(LS_PX * dpr);
+    if (lens.width !== px) { lens.width = lens.height = px; lens.style.width = lens.style.height = LS_PX + 'px'; }
+    const r = scr.getBoundingClientRect(), k = scr.width / r.width;
+    const sw = LS_PX / LZ * k, sx = (lensPos.x - r.left) * k - sw / 2, sy = (lensPos.y - r.top) * k - sw / 2;
+    lctx.setTransform(1, 0, 0, 1, 0, 0);
+    lctx.fillStyle = '#000'; lctx.fillRect(0, 0, px, px);
+    lctx.imageSmoothingEnabled = true;
+    lctx.drawImage(scr, sx, sy, sw, sw, 0, 0, px, px);
+    // ortadaki nişangâh: imleci tam buraya oturt
+    lctx.strokeStyle = 'rgba(255,140,40,.9)'; lctx.lineWidth = Math.max(1, dpr);
+    lctx.beginPath(); lctx.moveTo(px / 2, px / 2 - 14 * dpr); lctx.lineTo(px / 2, px / 2 + 14 * dpr); lctx.moveTo(px / 2 - 14 * dpr, px / 2); lctx.lineTo(px / 2 + 14 * dpr, px / 2); lctx.stroke();
+    lctx.fillStyle = 'rgba(255,255,255,.85)'; lctx.font = `${11 * dpr}px Segoe UI, Arial`; lctx.fillText(LZ + '×', 10 * dpr, px - 12 * dpr);
+    raf = requestAnimationFrame(drawLens);   // dalga canlı: mercek de canlı
+  }
+
+  return { init, apply };
 })();
 
 window.addEventListener('DOMContentLoaded', () => App.init());

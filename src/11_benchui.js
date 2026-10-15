@@ -14,6 +14,9 @@ const BenchUI = (() => {
   let drag = null;           // sürükleme durumu
   let wiring = null;         // {from:{c,p}, x, y}
   let hoverPin = null;       // kablo/prob sürüklerken yakalanacak pin
+  // görünüm (yakınlaştırma/kaydırma): SVG viewBox
+  const VB0 = { x: 0, y: 0, w: 1000, h: 460 };
+  let view = { ...VB0 }, pan = null, benchActive = false;
   let lastPropsKey = '';
   const SNAP = 20;
   const ANCHOR = [[1000, 70], [1000, 210]], EXT_ANCHOR = [1000, 380];
@@ -47,6 +50,16 @@ const BenchUI = (() => {
     svg.addEventListener('dblclick', onDbl);
     svg.addEventListener('pointerover', onHover);
     svg.addEventListener('pointerout', () => Panel.hideTip());
+    // yakınlaştırma: tezgâha bir kez tıkladıktan sonra fare tekerleği (sayfa kaydırmasını bozmasın diye)
+    svg.addEventListener('pointerleave', () => { benchActive = false; svg.classList.remove('active'); });
+    svg.addEventListener('wheel', e => {
+      if (!benchActive) return;
+      e.preventDefault();
+      zoomAt(pt(e), e.deltaY < 0 ? 1 / 1.15 : 1.15);
+    }, { passive: false });
+    document.getElementById('bZin').onclick = () => zoomAt([view.x + view.w / 2, view.y + view.h / 2], 1 / 1.25);
+    document.getElementById('bZout').onclick = () => zoomAt([view.x + view.w / 2, view.y + view.h / 2], 1.25);
+    document.getElementById('bZfit').onclick = () => { view = { ...VB0 }; applyView(); };
     document.getElementById('bUndo').onclick = undo;
     document.getElementById('bRedo').onclick = redo;
     document.getElementById('bRot').onclick = rotateSel;
@@ -229,6 +242,7 @@ const BenchUI = (() => {
     m.probes.forEach((p, i) => s += probeSvg(p, i));
     s += extSvg();
     svg.innerHTML = s;
+    applyView();
     renderWarn();
     renderProps(false, skipProps);
     document.getElementById('bUndo').disabled = !undoStack.length;
@@ -379,8 +393,18 @@ const BenchUI = (() => {
     });
     return best;
   }
+  function zoomAt([px, py], f) {
+    const nw = Math.max(250, Math.min(2000, view.w * f)), r = nw / view.w;
+    view = { x: px - (px - view.x) * r, y: py - (py - view.y) * r, w: nw, h: nw * VB0.h / VB0.w };
+    applyView();
+  }
+  function applyView() {
+    svg.setAttribute('viewBox', `${view.x.toFixed(1)} ${view.y.toFixed(1)} ${view.w.toFixed(1)} ${view.h.toFixed(1)}`);
+    const z = document.getElementById('bZlbl'); if (z) z.textContent = Math.round(VB0.w / view.w * 100) + '%';
+  }
   function onDown(e) {
     const t = e.target;
+    benchActive = true; svg.classList.add('active');
     const [x, y] = pt(e);
     Panel.hideTip();
     const sw = t.closest('.probe-sw');
@@ -408,12 +432,18 @@ const BenchUI = (() => {
       drag = { kind: 'comp', c, dx: c.x - x, dy: c.y - y, moved: false, snap: B.snapshot() };
       render(); e.preventDefault(); return;
     }
-    // boş alana tıklama
-    if (wiring) { wiring = null; hoverPin = null; }
-    sel = null; render();
+    // boş alana basma: sürüklenirse görünüm kayar, sürüklenmezse seçim kalkar
+    pan = { sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y, k: 1 / svg.getScreenCTM().a, moved: false };
+    e.preventDefault();
   }
   function onMove(e) {
     if (palDrag) { movePal(e); return; }
+    if (pan) {
+      const dx = e.clientX - pan.sx, dy = e.clientY - pan.sy;
+      if (!pan.moved && Math.hypot(dx, dy) > 4) { pan.moved = true; svg.style.cursor = 'grabbing'; }
+      if (pan.moved) { view.x = pan.vx - dx * pan.k; view.y = pan.vy - dy * pan.k; applyView(); }
+      return;
+    }
     if (!drag && !wiring) return;
     const [x, y] = pt(e);
     if (wiring) {
@@ -435,6 +465,11 @@ const BenchUI = (() => {
   }
   function onUp(e) {
     if (palDrag) { dropPal(e); return; }
+    if (pan) {
+      const moved = pan.moved; pan = null; svg.style.cursor = '';
+      if (!moved) { if (wiring) { wiring = null; hoverPin = null; } sel = null; render(); }
+      return;
+    }
     if (wiring) {
       const [x, y] = pt(e);
       const p = nearestPin(x, y, 14);

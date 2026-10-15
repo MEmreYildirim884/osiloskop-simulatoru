@@ -1,6 +1,6 @@
 {
   "name": "osiloskop-simulatoru",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "GW Instek GDS-1102B osiloskop simülatörü + devre tezgâhı + EE212 Lab kılavuzu (tarayıcıda çalışır, kurulum gerektirmez)",
   "private": true,
   "scripts": {
