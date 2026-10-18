@@ -1,5 +1,12 @@
 # Değişiklik günlüğü
 
+## v1.2.1 — Lab 2 kılavuzu sadeleşti
+- Her sayfada görev çubuğu: "Bu deneyde 4 görev var: G1 … G4", biten görev ✓ (tıklayınca o göreve gider)
+- Başla sayfasında görev tablosu: her görevde ne yapılır, tabloya kaç sayı yazılır
+- Sinüs çıkışı için basit açıklama (tepede çıkış 0, sıfırdan geçerken en büyük → 90° kayma); formüller katlanır kutularda
+- Hazırlık 3 sayfadan 2 sayfaya indi
+- Lab 2'de jeneratör genliği artık hiç değiştirilmez (hep aynı Vpp); "Jeneratörü ayarla" düğmesi kaldırıldı
+
 ## v1.2.0 — ⭐ Lab 2: op-amp türev alıcı (Prelab 02)
 - Yeni laboratuvar deneyi: **Lab 2 — Op-amp türev alıcı** (R1 = 1 kΩ, C1 = 1 µF, LM741 ±15 V). Kütüphanede ⭐ YENİ rozetiyle, ilk açılışta bildirim
 - Adım adım kılavuz: 1 kHz sinüste Vo,peak, 100 Hz üçgende iki çıkış seviyesi, 7 frekanslı üçgen tarama (Av = Vo,pp / Vi,pp), ilk bozulma frekansı
