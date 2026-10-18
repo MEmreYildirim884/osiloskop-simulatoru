@@ -1,7 +1,7 @@
 /* Service worker — uygulamayı çevrimdışı çalıştırır ve güncellemeleri yönetir.
  * Strateji: önce ağ (her açılışta en yeni sürüm), ağ yoksa önbellek.
  * VERSION değeri build.js tarafından package.json'dan yazılır; değişince eski önbellek silinir. */
-const VERSION = '1.2.0';
+const VERSION = '1.2.1';
 const CACHE = 'osiloskop-' + VERSION;
 const FILES = ['./', './index.html', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'];
 
