@@ -1,5 +1,10 @@
 # Değişiklik günlüğü
 
+## v1.3.0 — Lab 2 resimli anlatım + 🧮 Teorik hesaplar
+- Lab 2 Başla sayfası: "Bu deney 1 dakikada" (araba benzetmesi) ve sinüs / üçgen için giriş-çıkış çizimleri
+- Her görevde "✍️ Tabloya yaz" kutusu: Table 1'de hangi satıra ne yazılır
+- Yeni sekme 🧮 Teorik hesaplar: Table 1 teori değerlerinin özeti ve her satırın adım adım hesabı (diğer devrelerde de)
+
 ## v1.2.1 — Lab 2 kılavuzu sadeleşti
 - Her sayfada görev çubuğu: "Bu deneyde 4 görev var: G1 … G4", biten görev ✓ (tıklayınca o göreve gider)
 - Başla sayfasında görev tablosu: her görevde ne yapılır, tabloya kaç sayı yazılır

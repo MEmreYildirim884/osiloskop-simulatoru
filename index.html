@@ -165,6 +165,17 @@ kbd{background:#333a42;border:1px solid #59616b;border-bottom-width:2px;border-r
 .kind.prep{background:#3a4a5e;color:#cfe4ff}
 .kind.start,.kind.end{background:#3f8a52;color:#fff}
 .kind.bonus{background:#57487a;color:#fff}
+.gbox.write{background:#1c2a2b;border-color:#2f6b6b}
+.gbox.write::before{content:"✍️ Tabloya yaz: ";font-weight:700;color:#7fdcdc}
+.gbox.write table{margin:4px 0 0}
+.wpic{background:#111417;border:1px solid #3a4048;border-radius:8px;padding:6px;margin:6px 0}
+.wpic svg{width:100%;height:auto;display:block}
+.wpic .leg{font-size:11.5px;display:flex;gap:12px;flex-wrap:wrap;margin-top:3px}
+.cstep{border:1px solid #3a4048;border-radius:8px;padding:6px 10px;margin:6px 0;background:#22272e}
+.cstep .ch{font-weight:700;margin-bottom:4px}
+.cstep .no{display:inline-block;min-width:18px;height:18px;border-radius:9px;background:var(--accent);color:#000;text-align:center;font-size:11px;line-height:18px;margin-right:6px}
+.cstep .res{margin-top:4px;color:#7fe095;font-weight:600}
+.cstep p{margin:4px 0}
 .taskbar{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:6px 0 2px;font-size:12px;color:var(--muted)}
 .taskbar .tchip{border:1px solid #c4701f;border-radius:10px;padding:1px 8px;color:#ffd7a8;cursor:pointer;font-size:11.5px}
 .taskbar .tchip.on{background:#c4701f;color:#fff}
@@ -266,7 +277,7 @@ header h1 .ver{color:var(--muted);font-weight:400;font-size:11px;margin-left:4px
 </head>
 <body>
 <header>
-  <h1><span>GW INSTEK</span> GDS-1102B · Osiloskop Simülatörü <small class="ver" title="Derleme: 2026-10-18 16:13">v1.2.1</small></h1>
+  <h1><span>GW INSTEK</span> GDS-1102B · Osiloskop Simülatörü <small class="ver" title="Derleme: 2026-10-18 16:40">v1.3.0</small></h1>
   <button class="ui primary" id="libBtn" title="Tüm devreler: Lab 1, öğretmeli devreler, test devreleri">📚 Devreler</button>
   <span class="cnav"><button class="ui sm" id="prevC" title="Önceki devre">◀</button><button class="ui" id="curName" title="Devre kütüphanesini aç">—</button><button class="ui sm" id="nextC" title="Sonraki devre">▶</button></span>
   <span class="sp"></span>
@@ -4886,23 +4897,34 @@ const Guide = (() => {
     const MORE = (t, h) => `<details class="recipe"><summary>${t}</summary><div class="in">${h}</div></details>`;
     const at = (code) => steps.findIndex(x => x.code === code);
     const gain1k = (2 * Math.PI * 1000 * s1.RC).toFixed(3), clip1k = s1.sinPk > vs;
+    const toCalc = `<button data-tab="calc">🧮 Hesabın tamamı</button>`;
     steps.push({ kind: 'start', code: 'Başla', t: 'Bu deneyde ne yapacağız?', chk: 'loaded', html: () => `
       <div class="ccard lab new cur" style="cursor:default"><div class="ct">⭐ ${d.title}<span class="newb">YENİ</span></div><div class="ck">${inf.kind} · Prelab 02</div><div class="cf">R1 = 1 kΩ · C1 = 1 µF · LM741 (±15 V) · Vi,peak = ${Vp} V</div></div>
-      ${B('simple', 'Bu devre bir <b>türev alıcı</b>: girişteki dalga <b>ne kadar hızlı değişiyorsa</b> çıkış o kadar büyük olur. Giriş hızlı değişiyorsa çıkış büyük, giriş bir an duruyorsa çıkış 0.')}
-      <h3>1) Önce Vi değerini seç</h3>
+      <h3>Bu deney 1 dakikada</h3>
+      ${B('simple', 'Bu devre girişteki dalganın <b>ne kadar hızlı değiştiğini</b> çıkışa verir. Bir arabayı düşün: <b>sarı</b> dalga arabanın <b>yeri</b>, <b>mavi</b> dalga arabanın <b>hızı</b>. Araba dururken hız 0; hızlı giderken hız büyük; geri giderken hız eksi.')}
+      <p><b>① Sinüs verirsen</b> → çıkış yine yumuşak bir dalga olur, sadece çeyrek periyot kayar. (Bu deneyde çıkış çok büyük olmak ister, op-amp sınırında tepeleri kesilir.)</p>
+      ${wavePic('sine')}
+      <p><b>② Üçgen verirsen</b> → çıkış <b>kare dalga</b> olur. Çünkü üçgen sabit hızla çıkar, sabit hızla iner: hız sadece iki değer alır.</p>
+      ${wavePic('tri')}
+      <ul>
+        <li><b>Ters çevirir:</b> sarı çıkarken mavi eksidedir, sarı inerken mavi artıdadır.</li>
+        <li><b>Hızlı dalga = büyük çıkış:</b> frekansı artırırsan çıkış da büyür.</li>
+        <li><b>Sınırı var:</b> op-amp ±${vs} V'tan büyük çıkış veremez, fazlası düz kesilir.</li>
+      </ul>
+      <h3>Senden istenen: önce Vi'yi seç</h3>
       ${viSel2()}
-      <p class="muted">Prelab tepe değeri verir (Vi,peak = ${Vp} V). Jeneratör ise tepeden tepeye ister, yani jeneratöre <b>${tVi()} Vpp</b> yazacağız.</p>
-      <h3>2) Toplam 4 görev var</h3>
-      <p>Her görev Prelab Table 1'de bir ya da birkaç satırı doldurur. Bitirdiğin görev yeşil ✓ olur. Satıra tıklarsan o göreve gidersin.</p>
+      <p class="muted">Prelab tepe değeri verir (Vi,peak = ${Vp} V). Jeneratör tepeden tepeye ister: jeneratöre <b>${tVi()} Vpp</b> yazacağız ve deney boyunca <b>hiç değiştirmeyeceğiz</b>.</p>
+      <h3>Sonra 4 görev</h3>
+      <p>Her görev Prelab Table 1'deki satırları doldurur. Biten görev yeşil ✓ olur. Satıra tıklarsan o göreve gidersin.</p>
       <table>
-        <tr><th>Görev</th><th>Ne yapacaksın?</th><th>Tabloya ne yazılır?</th></tr>
-        <tr data-goto="${at('G1')}" style="cursor:pointer"><td><b>G1</b></td><td>1 kHz <b>sinüs</b> ver, mavi dalganın tepe değerini oku</td><td>1 sayı (Vo,peak)</td></tr>
-        <tr data-goto="${at('G2')}" style="cursor:pointer"><td><b>G2</b></td><td>100 Hz <b>üçgen</b> ver, mavi kare dalganın üst ve alt seviyesini oku</td><td>2 sayı</td></tr>
-        <tr data-goto="${at('G3')}" style="cursor:pointer"><td><b>G3</b></td><td>Üçgeni <b>${SWEEP().length} farklı frekansta</b> ver, her birinde kazancı (Av) bul</td><td>${SWEEP().length} sayı</td></tr>
-        <tr data-goto="${at('G4')}" style="cursor:pointer"><td><b>G4</b></td><td>G3 sırasında mavi dalganın <b>ilk kesildiği</b> frekansı yaz</td><td>1 frekans</td></tr>
+        <tr><th>Görev</th><th>Ne yapacaksın?</th><th>Tabloya</th></tr>
+        <tr data-goto="${at('G1')}" style="cursor:pointer"><td><b>G1</b></td><td>1 kHz <b>sinüs</b> ver, mavi dalganın tepe değerini oku</td><td>1 sayı</td></tr>
+        <tr data-goto="${at('G2')}" style="cursor:pointer"><td><b>G2</b></td><td>100 Hz <b>üçgen</b> ver, mavi kare dalganın alt ve üst seviyesini oku</td><td>2 sayı</td></tr>
+        <tr data-goto="${at('G3')}" style="cursor:pointer"><td><b>G3</b></td><td>Üçgeni <b>${SWEEP().length} frekansta</b> ver, her birinde kazancı (Av) bul</td><td>${SWEEP().length} sayı</td></tr>
+        <tr data-goto="${at('G4')}" style="cursor:pointer"><td><b>G4</b></td><td>G3 sırasında mavinin <b>ilk kesildiği</b> frekansı yaz</td><td>1 frekans</td></tr>
       </table>
-      <p>Görevlerden önce <b>2 kısa hazırlık sayfası</b> var (H1: problar, H2: jeneratör + Autoset). Orada tabloya bir şey yazılmaz. En sonda isteğe bağlı bir <b>bonus</b> ve bitiş sayfası var.</p>
-      ${B('tip', 'Prelab tablosundaki sütunlar: <b>Theoretical</b> = kılavuzda yazan teori değeri · <b>Simulation</b> = burada ölçtüğün · <b>Experimental</b> = laboratuvarda ölçtüğün.')}
+      <p>Görevlerden önce <b>2 kısa hazırlık</b> sayfası var (H1: problar, H2: jeneratör + Autoset).</p>
+      ${B('tip', `Table 1'in <b>Theoretical</b> sütunu: üstteki <b>🧮 Teorik hesaplar</b> sekmesinde adım adım hesaplı. <b>Simulation</b> = burada ölçtüğün. <b>Experimental</b> = laboratuvarda ölçtüğün. ${acts(toCalc)}`)}
       <ol class="steps"><li data-chk="loaded">Devre tezgâhta kurulu olmalı. ${acts(doit('load', '⚡ Devreyi (yeniden) kur'))}</li></ol>` });
 
     steps.push({ kind: 'prep', code: 'H1', t: 'Probları bağla', chk: ['p1Vi', 'p2Vo', 'gnd'], html: () => `
@@ -4923,7 +4945,7 @@ const Guide = (() => {
       <ol class="steps">
         <li>Tezgâhta <b>jeneratöre (FG1) tıkla</b>; sağda ayarları açılır.</li>
         <li data-chk="fgS1k">Dalga: <b>Sinüs</b>, frekans: <b>1 kHz</b> (çipe tıkla).</li>
-        <li data-chk="fgAmp">Genlik: <b>${tVi()} Vpp</b>. ${acts(doit('fgS1k'))}</li>
+        <li data-chk="fgAmp">Genlik: <b>${tVi()} Vpp</b>. Bu genliği deney bitene kadar <b>değiştirme</b>. ${acts(doit('fgS1k'))}</li>
         <li data-chk="ch2on">Osiloskopta <b>CH2</b> tuşuna bas → mavi yanar (CH1 zaten sarı yanıyor). ${acts(show('ch2'), doit('ch2on'))}</li>
         <li data-chk="trig"><b>Autoset</b> tuşuna bas. Sağ üstte yeşil <b>Trig'd</b> yazmalı. ${acts(show('autoset'), doit('autoset'))}</li>
       </ol>
@@ -4938,46 +4960,45 @@ const Guide = (() => {
         <li data-chk="mMax2">${BOT(1, 'Add Measurement')} → ${SIDE(4, 'Source1')} ile <b>CH2</b> → ${SIDE(1, 'V/I')} → ${KNOB('VARIABLE')}, listede <b>Max</b>'ı seç → <b>Select</b> → <b>Menu Off</b>. ${acts(show('side3,side0,variable,select'), doit('mMax2'))}</li>
         <li data-chk="capSin">CH2 Max = ${live('vmax2')} → bu senin <b>Vo,peak</b> değerin. ${acts(doit('capSin', '📥 Tabloya kaydet'))}</li>
       </ol>
-      <h3>Hangi sayıyı görmeliyim?</h3>
-      ${clip1k ? B('warn', `Kâğıt üstünde (ideal) çıkış <b>${s1.sinPk.toFixed(2)} V</b> olmalı. Ama op-amp ±15 V ile beslendiği için ${vs} V'tan büyük çıkış veremez. Bu yüzden ekranda <b>≈ ${vs} V</b> görürsün ve tepeler düz kesilir. Bu bir hata değil, <b>doyum</b>.<br>Rapora: "İdeal ${s1.sinPk.toFixed(2)} V, ölçülen ≈ ${vs} V, çünkü op-amp doyuma girdi."`) : B('see', `Beklenen: <b>${s1.sinPk.toFixed(2)} V</b>.`)}
-      <h3>Çıkış neden yine dalga şeklinde?</h3>
-      ${B('why', `Bu devre girişin <b>ne kadar hızlı değiştiğini</b> çıkışa verir. Sarı sinüse bak:
-        <ul><li><b>Tepesinde</b> bir an durur (ne çıkıyor ne iniyor) → değişim 0 → <b>çıkış 0</b>.</li>
-        <li><b>Ortadan (0 V'tan) geçerken</b> en dik hâlindedir → değişim en büyük → <b>çıkış en büyük</b>.</li></ul>
-        Yani çıkış da yine aynı şekilde yumuşak bir dalga olur; sadece girişe göre <b>çeyrek periyot kaymıştır</b> (girişin tepesinde çıkış 0, girişin sıfırında çıkış tepede). Buna "90° faz farkı" denir.<br>
-        Ne kadar büyük? Bu devrede 1 kHz'de çıkış girişin 2π·f·R1·C1 = <b>${gain1k} katı</b>: ${Vp} V × ${gain1k} = ${s1.sinPk.toFixed(2)} V.`)}
-      ${MORE('Matematiği göster (Prelab · Mathematical Modeling)', `<div class="formula">Vi(t) = V<sub>p</sub>·cos(ωt) → dVi/dt = −ω·V<sub>p</sub>·sin(ωt)<br>Vo(t) = −R1C1·dVi/dt = ωR1C1·V<sub>p</sub>·sin(ωt) = <b>${s1.sinPk.toFixed(2)}·sin(6283.18·t) V</b> (ideal)<br>Vo,peak = ωR1C1·V<sub>p</sub> = ${gain1k} × ${Vp} = <b>${s1.sinPk.toFixed(2)} V</b></div>
-        <p>Kazanç frekansla artar (ωR1C1): frekans iki katına çıkarsa çıkış da iki katına çıkar. Bu yüzden türev alıcılar yüksek frekanslı gürültüyü büyütür ve kolay doyuma girer.</p>`)}` });
+      <h3>Ekranda ne göreceksin?</h3>
+      ${wavePic('sine')}
+      ${B('why', `Araba benzetmesi: sarı = yer, mavi = hız.
+        <ul><li><b>①</b> Sarı <b>tepede</b>: araba bir an durur → hız 0 → <b>mavi 0</b>.</li>
+        <li><b>②</b> Sarı <b>ortadan (0 V) geçerken</b>: en dik hâli, araba en hızlı → <b>mavi tepede</b>.</li></ul>
+        Bu yüzden mavi de dalga şeklindedir ama sarıya göre çeyrek periyot kaymıştır ("90° faz farkı").`)}
+      ${clip1k ? B('warn', `Hesaba göre mavi <b>${s1.sinPk.toFixed(2)} V</b>'a kadar çıkmalı (kesik çizgi). Ama op-amp ±15 V ile beslendiği için ${vs} V'u geçemez, tepeler <b>düz kesilir</b>. Bu yüzden CH2 Max ≈ <b>${vs} V</b> okursun. Bu bir hata değil, <b>doyum</b>.`) : ''}
+      ${B('write', `Table 1 → <b>Sinusoidal Output Vo,peak</b>: Theoretical = <b>${s1.sinPk.toFixed(2)} V</b> · Simulation = okuduğun CH2 Max${clip1k ? ` (≈ ${vs} V). Raporda: "İdeal ${s1.sinPk.toFixed(2)} V, op-amp doyumu yüzünden ≈ ${vs} V ölçüldü."` : '.'}`)}
+      ${MORE(`${s1.sinPk.toFixed(2)} V nereden çıktı?`, `<div class="formula">Vo,peak = 2π·f·R1·C1·V<sub>p</sub> = 6283.2 × ${RCt} × ${Vp} = <b>${s1.sinPk.toFixed(2)} V</b></div>Adım adım hali: ${acts(toCalc)}`)}` });
 
     steps.push({ kind: 'task', code: 'G2', short: 'Üçgen iki seviye', goes: 'Tablo 1 → Vo,max (+ / − eğim)', t: 'Üçgen (100 Hz): çıkışın iki seviyesi', chk: ['fgTri', 'mMax2', 'mMin2', 'capTri'], html: () => `
-      ${B('simple', 'Girişi <b>üçgen</b> yapıyoruz. Üçgen dümdüz bir çizgiyle çıkar, dümdüz bir çizgiyle iner: yani değişim hızı hep aynıdır. Bu yüzden çıkış iki sabit seviye arasında gidip gelen bir <b>kare dalga</b> olur. Bu iki seviyeyi okuyacağız.')}
+      ${B('simple', 'Girişi <b>üçgen</b> yapıyoruz. Üçgen dümdüz bir çizgiyle çıkar, dümdüz bir çizgiyle iner. Yani hızı hep aynıdır → çıkış iki sabit seviye arasında gidip gelen bir <b>kare dalga</b> olur. Bu iki seviyeyi okuyacağız.')}
       <ol class="steps">
-        <li data-chk="fgTri">Jeneratöre tıkla → Dalga: <b>Üçgen</b>, frekans <b>100 Hz</b>, genlik aynı (<b>${tVi()} Vpp</b>). Sonra <b>Autoset</b>. ${acts(show('autoset'), doit('fgTri'))}</li>
+        <li data-chk="fgTri">Jeneratöre tıkla → Dalga: <b>Üçgen</b>, frekans <b>100 Hz</b>. Genlik aynı kalır (<b>${tVi()} Vpp</b>). Sonra <b>Autoset</b>. ${acts(show('autoset'), doit('fgTri'))}</li>
         <li data-chk="mMax2">Measure → Source1 = <b>CH2</b> → V/I → <b>Max</b> → Select. ${acts(doit('mMax2'))}</li>
         <li data-chk="mMin2">Aynı yoldan <b>Min</b> ekle (listede Max'ın altında). ${acts(doit('mMin2'))}</li>
         <li data-chk="capTri">Okuduğun değerleri kaydet. ${acts(doit('capTri', '📥 Tabloya kaydet'))}</li>
       </ol>
-      <table><tr><th>Tablodaki satır</th><th>Ekranda</th><th>Şu an</th><th>Beklenen</th></tr>
-        <tr><td>Vo,max (Positive Slope) — sarı <b>yükselirken</b></td><td>CH2 <b>Min</b></td><td>${live('vmin2')}</td><td><b>${(-t100.lvl).toFixed(3)} V</b></td></tr>
-        <tr><td>Vo,max (Negative Slope) — sarı <b>düşerken</b></td><td>CH2 <b>Max</b></td><td>${live('vmax2')}</td><td><b>+${t100.lvl.toFixed(3)} V</b></td></tr></table>
-      ${B('see', 'Sarı yukarı çıkarken mavi <b>aşağıda</b> (eksi), sarı inerken mavi <b>yukarıda</b> (artı). Ters olmasının sebebi formüldeki eksi işareti: Vo = <b>−</b>R1C1·dVi/dt (devre ters çeviren tipte).')}
-      ${MORE('Matematiği göster (Prelab · Mathematical Modeling)', `<div class="formula">T = 10 ms. Yükselen kenar (0 &lt; t &lt; 5 ms): Vi, −${Vp} V'tan +${Vp} V'a 5 ms'de çıkar<br>
-        dVi/dt = 2·V<sub>p</sub> / (T/2) = 4·V<sub>p</sub>·f = <b>+${t100.slope.toFixed(0)} V/s</b> → Vo = −R1C1·dVi/dt = <b>${(-t100.lvl).toFixed(3)} V</b><br>
-        Düşen kenar (5 &lt; t &lt; 10 ms): dVi/dt = <b>−${t100.slope.toFixed(0)} V/s</b> → Vo = <b>+${t100.lvl.toFixed(3)} V</b></div>`)}
+      <h3>Ekranda ne göreceksin?</h3>
+      ${wavePic('tri')}
+      ${B('see', 'Sarı yukarı çıkarken mavi <b>aşağıda</b> (eksi), sarı inerken mavi <b>yukarıda</b> (artı). Ters olmasının sebebi formüldeki eksi işareti (devre ters çeviren tipte).')}
+      ${B('write', `<table><tr><th>Table 1 satırı</th><th>Ekranda</th><th>Şu an</th><th>Theoretical</th></tr>
+        <tr><td>Vo,max (Positive Slope) — sarı <b>çıkarken</b></td><td>CH2 <b>Min</b></td><td>${live('vmin2')}</td><td><b>${(-t100.lvl).toFixed(3)} V</b></td></tr>
+        <tr><td>Vo,max (Negative Slope) — sarı <b>inerken</b></td><td>CH2 <b>Max</b></td><td>${live('vmax2')}</td><td><b>+${t100.lvl.toFixed(3)} V</b></td></tr></table>`)}
+      ${MORE(`±${t100.lvl.toFixed(1)} V nereden çıktı?`, `<div class="formula">Üçgen 5 ms'de ${2 * Vp} V yükselir → eğim = ${2 * Vp} / 0.005 = <b>${t100.slope.toFixed(0)} V/s</b><br>Vo = −R1C1 × eğim = −${RCt} × ${t100.slope.toFixed(0)} = <b>${(-t100.lvl).toFixed(3)} V</b></div>Adım adım hali: ${acts(toCalc)}`)}
       ${MORE('Kare dalganın köşeleri neden biraz yuvarlak?', 'Jeneratörün 50 Ω iç direnci C1 ile küçük bir gecikme yapar (50 Ω × 1 µF = 50 µs). Gerçek devrede op-amp\'ın sınırlı hızı (slew rate) da eklenir. Ölçümü etkilemez.')}` });
 
     steps.push({ kind: 'task', code: 'G3', short: 'Frekans taraması', goes: 'Tablo 1 → Triangular Gain (7 frekans)', t: `Üçgen: ${SWEEP().length} frekansta kazanç`, chk: ['t2'], html: () => `
-      ${B('simple', `Aynı üçgeni ${SWEEP().length} farklı frekansta veriyoruz. Frekans arttıkça üçgen daha dik olur → çıkış büyür. Her frekansta kazancı (<b>Av = Vo,pp / Vi,pp</b>) bulup yazıyoruz.`)}
-      <p><b>Her satır için 2 tık:</b> önce <b>▶ Ayarla</b> (jeneratörü o frekansa getirir + Autoset yapar), sonra <b>📥 Kaydet</b> (CH1 ve CH2 Pk-Pk'yi okuyup Av'yi yazar). Genliğe <b>dokunma</b>.</p>
-      <p>Şu an: ${live('freq')} · CH1 ${live('vi')} · CH2 ${live('vo')} · Av ${live('gain')} (ideal ${live('thAv')})</p>
+      ${B('simple', `Aynı üçgeni ${SWEEP().length} farklı frekansta veriyoruz. Frekans artınca üçgen daha hızlı çıkıp iner → kare dalga büyür. Her frekansta kazancı bulup yazıyoruz: <b>Av = Vo,pp / Vi,pp</b> (mavinin boyu ÷ sarının boyu).`)}
+      <p><b>Her satır için 2 tık:</b> önce <b>▶ Ayarla</b> (jeneratörün sadece frekansını değiştirir + Autoset), sonra <b>📥 Kaydet</b> (CH1 ve CH2 Pk-Pk'yi okur, Av'yi hesaplar). Genliğe <b>dokunma</b>.</p>
+      <p>Şu an: ${live('freq')} · CH1 ${live('vi')} · CH2 ${live('vo')} · Av ${live('gain')} (beklenen ${live('thAv')})</p>
       <table class="lab"><tr><th>f</th><th>Beklenen Av</th><th>Ölçülen Av</th><th></th></tr>
         ${SWEEP().map(f => { const t = dth(f), m = dat().t2[f]; return `<tr><td>${fq(f)}</td><td class="th">${t.av.toFixed(2)}${t.clip ? ' <span class="bad" title="çıkış kesilir">⚠</span>' : ''}</td>
           <td>${isFinite(m) ? `<b>${(+m).toFixed(3)}</b> <span class="${Math.abs(m / t.av - 1) <= 0.05 ? 'good' : 'bad'}">(${(Math.abs(m / t.av - 1) * 100).toFixed(1)}%)</span>` : '—'}</td>
           <td><span class="acts"><button class="do" data-sweep="${f}">▶ Ayarla</button><button data-save="${f}">📥 Kaydet</button></span></td></tr>`; }).join('')}
       </table>
       ${B('see', `<b>G4 için şimdiden bak:</b> frekansları sırayla gezerken mavi kare dalgaya dikkat et. Bir frekanstan sonra üstü/altı <b>düz kesilir</b> (±${vs} V'ta takılır). ⚠ işaretli satırlarda bu olur ve ölçülen Av beklenenden <b>küçük</b> çıkar — bu normal.`)}
-      ${MORE('Formül: Av = 4·f·R1·C1', `<div class="formula">Av = Vo,pp / Vi,pp = (2·R1C1·4V<sub>p</sub>f) / (2V<sub>p</sub>) = <b>4·f·R1C1</b> &nbsp;(genlikten bağımsız!)</div>`)}
-      ${MORE('Ölçtüğüm Av beklenenden birkaç % büyük çıkıyor, neden?', 'Prelab "genliği sabit tut" diyor: jeneratörün genliğine dokunmuyoruz. Ama CH1\'de okunan Vi,pp frekansla biraz değişir (jeneratörün 50 Ω iç direnci). Yüksek frekansta üçgenin uçları biraz yuvarlanır: Vi,pp küçülür ama eğim aynı kalır, bu yüzden Av birkaç % büyük çıkar. Gerçekçi bir durum.')}` });
+      ${B('write', `Table 1 → <b>Triangular Gain</b> satırları: Theoretical = "Beklenen Av" sütunu · Simulation = "Ölçülen Av" sütunu. Beklenen Av = 4 × f × R1C1 (ör. 100 Hz: 4 × 100 × ${RCt} = ${dth(100).av.toFixed(2)}). ${acts(toCalc)}`)}
+      ${MORE('Ölçtüğüm Av beklenenden birkaç % büyük çıkıyor, neden?', 'CH1\'de okunan Vi,pp frekansla biraz değişir (jeneratörün 50 Ω iç direnci). Yüksek frekansta üçgenin uçları biraz yuvarlanır: Vi,pp küçülür ama eğim aynı kalır, bu yüzden Av birkaç % büyük çıkar. Gerçekçi bir durum.')}` });
 
     steps.push({ kind: 'task', code: 'G4', short: 'İlk bozulma', goes: 'Tablo 1 → First distorted frequency', t: 'Çıkış hangi frekansta bozulmaya başladı?', chk: ['fdist'], html: () => `
       ${B('simple', `G3'te gördüğün şeyi yazıyorsun: mavi kare dalganın üstü/altı <b>ilk hangi frekansta</b> düz kesildi (±${vs} V'ta takıldı)?`)}
@@ -4985,9 +5006,8 @@ const Guide = (() => {
         <li>Nasıl anlarım? CH2 Pk-Pk artık büyümüyor (≈ ${2 * vs} V'ta kalıyor) ve Av beklenenden belirgin küçük.</li>
         <li data-chk="fdist">Gördüğün ilk frekans: ${fdistSel()}</li>
       </ol>
-      ${B('see', `Beklenen cevap: <b>${fdistTxt(fd)}</b>. Prelab'daki "Theoretical" sütununa ise <b>"none"</b> yazılır, çünkü ideal türev alıcının çıkışı sınırsız büyüyebilir.`)}
-      ${MORE('Hesabı göster', `<div class="formula">Kesilme başlar: R1C1·4V<sub>p</sub>f &gt; ${vs} V → f &gt; ${vs} / (4·${Vp}·${RCt}) = <b>${fq(+(vs / (4 * Vp * s1.RC)).toPrecision(4))}</b><br>Taramadaki ilk frekans: <b>${fdistTxt(fd)}</b></div>
-        <p>Gerçek op-amp'ın çıkışı besleme gerilimini geçemez. Ayrıca LM741'in <b>slew rate</b>'i (≈ 0.5 V/µs) kare dalganın dik kenarlarını eğik yapar, <b>GBW</b>'si (≈ 1 MHz) yüksek frekansta kazancı sınırlar.</p>`)}` });
+      ${B('write', `Table 1 → <b>First frequency with noticeable distortion</b>: Theoretical = <b>none</b> (ideal türev alıcının çıkışı sınırsız büyüyebilir) · Simulation = gördüğün frekans (beklenen <b>${fdistTxt(fd)}</b>).`)}
+      ${MORE('Neden tam bu frekans?', `<div class="formula">Kare dalganın seviyesi = R1C1 × 4·V<sub>p</sub>·f. Bu ${vs} V'u geçince kesilir:<br>f &gt; ${vs} / (4 × ${Vp} × ${RCt}) = <b>${fq(+(vs / (4 * Vp * s1.RC)).toPrecision(4))}</b> → taramada bunu geçen ilk frekans <b>${fdistTxt(fd)}</b></div>Adım adım hali: ${acts(toCalc)}`)}` });
 
     steps.push({ kind: 'bonus', code: '+', t: 'Kazancın 1 olduğu frekans', chk: ['fchar'], html: () => `
       ${B('simple', 'Sinüste |Vo/Vi| = ωR1C1. Bu oranın tam 1 olduğu frekansta çıkış ile giriş aynı büyüklükte olur.')}
@@ -5074,6 +5094,110 @@ const Guide = (() => {
         ${SWEEP().map(f => { const t = dth(f); return `<tr><td>${fq(f)}</td><td>${t.slope.toFixed(0)} V/s</td><td>±${t.lvl.toFixed(2)} V</td><td>${t.vopp.toFixed(2)} V${t.clip ? ' <span class="bad">⚠ kırpılır</span>' : ''}</td><td>${t.av.toFixed(2)}</td></tr>`; }).join('')}</table>
       <p>Kırpılma sınırı: f &gt; ${vs} / (4·V<sub>p</sub>·R1C1) = <b>${fq(+(vs / (4 * Vp * s1.RC)).toPrecision(4))}</b> → taramadaki ilk frekans <b>${fdistTxt(fdistTh())}</b>.</p>
       ${B('tip', 'Teorik değerler tezgâhtaki R1 ve C1\'den hesaplanır. Bir değeri değiştirirsen tablo da değişir.')}`;
+  }
+
+  /** Lab 2 için küçük dalga çizimi: sarı = Vi, mavi = Vo (ölçekli değil, şekli anlatmak için) */
+  function wavePic(kind) {
+    const W = 400, H = 150, m = 75, x0 = 30, w = W - x0 - 8;
+    const X = (t) => (x0 + t / 2 * w).toFixed(1);
+    const line = (fn, col, extra = '') => `<polyline fill="none" stroke="${col}" stroke-width="2.2" stroke-linejoin="round" ${extra} points="${Array.from({ length: 401 }, (_, i) => { const t = i / 200; return `${X(t)},${(m - fn(t)).toFixed(1)}`; }).join(' ')}"/>`;
+    const txt = (x, y, s, col, anc = 'start') => `<text x="${x}" y="${y}" fill="${col}" font-size="11" text-anchor="${anc}">${s}</text>`;
+    const mark = (t, n) => `<line x1="${X(t)}" x2="${X(t)}" y1="8" y2="${H - 8}" stroke="#aaa" stroke-dasharray="2 3"/><circle cx="${X(t)}" cy="12" r="8" fill="#ff9d3d"/>${txt(X(t), 16, n, '#000', 'middle')}`;
+    let body = '', note = '';
+    if (kind === 'sine') {
+      const s1 = dth(1000), vs = vsatNow(), A = 60, L = isFinite(vs) && s1.sinPk > vs ? A * vs / s1.sinPk : A, S = (t) => A * Math.sin(2 * Math.PI * t);
+      if (L < A) body += line(S, '#4fc3ff', 'stroke-dasharray="3 4" opacity=".4"')
+        + [1, -1].map(k => `<line x1="${x0}" x2="${W - 8}" y1="${m - k * L}" y2="${m - k * L}" stroke="#ff8a5c" stroke-dasharray="5 4"/>`).join('')
+        + txt(W - 10, m - L - 4, `sınır +${vs} V`, '#ff8a5c', 'end') + txt(W - 10, m + L + 12, `sınır −${vs} V`, '#ff8a5c', 'end');
+      body += line(t => 30 * Math.cos(2 * Math.PI * t), '#ffe14a') + line(t => Math.max(-L, Math.min(L, S(t))), '#4fc3ff') + mark(1, '①') + mark(1.25, '②');
+      note = '① sarı tepede → mavi 0 · ② sarı 0\'dan geçerken → mavi tepede' + (L < A ? ' · kesik mavi = op-amp sınırı olmasaydı' : '');
+    } else {
+      const tri = (t) => { const u = t % 1; return u < 0.5 ? -32 + 128 * u : 32 - 128 * (u - 0.5); };
+      body += line(tri, '#ffe14a') + line(t => (t % 1) < 0.5 ? -22 : 22, '#4fc3ff')
+        + txt(X(0.25), m - 52, 'sarı çıkıyor ↗', '#ffe14a', 'middle') + txt(X(0.25), m + 38, 'mavi aşağıda (−)', '#4fc3ff', 'middle')
+        + txt(X(0.75), m - 52, 'sarı iniyor ↘', '#ffe14a', 'middle') + txt(X(0.75), m - 30, 'mavi yukarıda (+)', '#4fc3ff', 'middle');
+      note = 'Üçgenin eğimi sabit → çıkış sadece iki seviye alır (kare dalga)';
+    }
+    return `<div class="wpic"><svg viewBox="0 0 ${W} ${H}"><line x1="${x0}" x2="${W - 8}" y1="${m}" y2="${m}" stroke="#555"/>${txt(4, m + 4, '0 V', '#888')}${body}</svg>
+      <div class="leg"><span style="color:var(--ch1)">━ sarı = Vi (giriş, CH1)</span><span style="color:var(--ch2)">━ mavi = Vo (çıkış, CH2)</span></div><div class="leg muted">${note}</div></div>`;
+  }
+
+  /* ---------------- teorik hesaplar sekmesi ---------------- */
+  const cstep = (no, title, body, res) => `<div class="cstep"><div class="ch"><span class="no">${no}</span>${title}</div>${body}${res ? `<div class="res">✅ ${res}</div>` : ''}</div>`;
+  const sci = (v) => { if (!v) return '0'; const e = Math.floor(Math.log10(Math.abs(v))); return e >= -3 && e <= 4 ? String(+v.toPrecision(4)) : `${+(v / 10 ** e).toPrecision(4)} × 10<sup>${e}</sup>`; };
+  function diffCalc() {
+    const R = comp('R1'), C = comp('C1'), Rv = R ? R.value : 1000, Cv = C ? C.value : 1e-6, RC = Rv * Cv;
+    const Vp = tVi() / 2, vs = vsatNow(), s1 = dth(1000), t100 = dth(100), w = 2 * Math.PI * 1000, fd = fdistTh();
+    const rc = sci(RC), n = (v, k = 3) => (+v).toFixed(k), lim = vs / (4 * Vp * RC);
+    return `<h2>🧮 Teorik hesaplamalar — ${D().title}</h2>
+      ${B('simple', 'Prelab Table 1\'deki <b>Theoretical Value</b> sütununun her satırı burada sayılarla, adım adım hesaplandı. Sadece çarpma ve bölme var.')}
+      ${viSel2()}
+      <h3>Kısaca sonuçlar (Theoretical sütunu)</h3>
+      <table class="lab"><tr><th>Table 1 satırı</th><th>Theoretical</th></tr>
+        <tr><td>Sinusoidal Output Vo,peak (1 kHz)</td><td class="th"><b>${n(s1.sinPk, 2)} V</b></td></tr>
+        ${SWEEP().map(f => `<tr><td>Triangular Gain |Vo/Vi| (${fq(f)})</td><td class="th"><b>${n(dth(f).av, 2)}</b></td></tr>`).join('')}
+        <tr><td>Triangular Vo,max (Positive Slope)</td><td class="th"><b>${n(-t100.lvl)} V</b></td></tr>
+        <tr><td>Triangular Vo,max (Negative Slope)</td><td class="th"><b>+${n(t100.lvl)} V</b></td></tr>
+        <tr><td>First distorted frequency</td><td class="th"><b>none</b> (ideal)</td></tr></table>
+
+      <h3>0) Elimizdeki değerler</h3>
+      <table>
+        <tr><td>R1</td><td>${fmt(Rv, 'Ω')} = <b>${sci(Rv)} Ω</b></td></tr>
+        <tr><td>C1</td><td>${fmt(Cv, 'F')} = <b>${sci(Cv)} F</b></td></tr>
+        <tr><td>R1 × C1</td><td>${sci(Rv)} × ${sci(Cv)} = <b>${rc} s</b></td></tr>
+        <tr><td>Vi,peak (V<sub>p</sub>)</td><td><b>${Vp} V</b> (jeneratörde ${tVi()} Vpp)</td></tr>
+        ${isFinite(vs) ? `<tr><td>Op-amp çıkış sınırı</td><td>±15 V besleme → en fazla <b>±${vs} V</b></td></tr>` : ''}
+      </table>
+      <div class="formula">Ana formül: <b>Vo = −R1·C1 × (dVi/dt)</b><br>Türkçesi: çıkış = −${rc} × (girişin 1 saniyede kaç volt değiştiği)</div>
+
+      <h3>1) Sinüs çıkışı Vo,peak (f = 1 kHz)</h3>
+      ${cstep(1, 'Açısal frekans ω', `<div class="formula">ω = 2π × f = 2 × 3.1416 × 1000 = <b>${n(w, 1)} rad/s</b></div><p class="muted">Prelab'daki cos(<b>6283.18</b>·t) bu sayı.</p>`)}
+      ${cstep(2, 'Girişin en hızlı değişimi', `<p>Sinüs en hızlı 0 V'tan geçerken değişir. Bu hız = ω × V<sub>p</sub>:</p><div class="formula">${n(w, 1)} × ${Vp} = <b>${n(w * Vp, 0)} V/s</b></div>`)}
+      ${cstep(3, 'Çıkışın tepe değeri', `<div class="formula">Vo,peak = R1C1 × ${n(w * Vp, 0)} = ${rc} × ${n(w * Vp, 0)} = <b>${n(s1.sinPk, 2)} V</b></div>`, `Theoretical = ${n(s1.sinPk, 2)} V`)}
+      ${cstep(4, 'Çıkışın tamamı (Prelab Mathematical Modeling)', `<div class="formula">Vi(t) = ${Vp}·cos(6283.18·t)<br>dVi/dt = −${n(w * Vp, 0)}·sin(6283.18·t)<br>Vo(t) = −${rc} × dVi/dt = <b>${n(s1.sinPk, 2)}·sin(6283.18·t) V</b></div><p class="muted">Kazanç |Vo/Vi| = ω·R1C1 = ${n(w * RC, 3)} → çıkış girişin ${n(w * RC, 2)} katı, 90° kaymış.</p>`)}
+      ${s1.sinPk > vs ? B('warn', `${n(s1.sinPk, 2)} V &gt; ${vs} V: op-amp bunu veremez, simülasyonda ve laboratuvarda ≈ ${vs} V ölçersin. Tabloya teori olarak yine <b>${n(s1.sinPk, 2)} V</b> yazılır, farkı raporda "op-amp doyumu" diye açıkla.`) : ''}
+
+      <h3>2) Üçgen (100 Hz): çıkışın iki seviyesi</h3>
+      ${cstep(1, 'Periyot', `<div class="formula">T = 1 / f = 1 / 100 = <b>0.01 s</b> (10 ms) → yükselme süresi T/2 = <b>0.005 s</b></div>`)}
+      ${cstep(2, 'Eğim (girişin hızı)', `<p>Üçgen yarım periyotta −${Vp} V'tan +${Vp} V'a çıkar, yani ${2 * Vp} V değişir:</p><div class="formula">eğim = ${2 * Vp} V / 0.005 s = <b>${n(t100.slope, 0)} V/s</b></div>`)}
+      ${cstep(3, 'Sarı çıkarken (pozitif eğim)', `<div class="formula">Vo = −${rc} × (+${n(t100.slope, 0)}) = <b>${n(-t100.lvl)} V</b></div>`, `Positive Slope: ${n(-t100.lvl)} V`)}
+      ${cstep(4, 'Sarı inerken (negatif eğim)', `<div class="formula">Vo = −${rc} × (−${n(t100.slope, 0)}) = <b>+${n(t100.lvl)} V</b></div>`, `Negative Slope: +${n(t100.lvl)} V`)}
+
+      <h3>3) Üçgen kazancı Av (${SWEEP().length} frekans)</h3>
+      ${cstep(1, 'Kısa formül', `<p>Eğim = 4·V<sub>p</sub>·f. Kare dalganın boyu Vo,pp = 2 × R1C1 × 4·V<sub>p</sub>·f, girişin boyu Vi,pp = 2·V<sub>p</sub>. Böl, V<sub>p</sub>'ler sadeleşir:</p><div class="formula">Av = Vo,pp / Vi,pp = <b>4 × f × R1C1</b> (genliğe bağlı değil)</div>`)}
+      ${cstep(2, 'Her frekans için', `<table><tr><th>f</th><th>Hesap</th><th>Av</th><th>Vo,pp (ideal)</th></tr>
+        ${SWEEP().map(f => { const t = dth(f); return `<tr><td>${fq(f)}</td><td>4 × ${f} × ${rc}</td><td><b>${n(t.av, 2)}</b></td><td>${n(t.vopp, 2)} V${t.clip ? ' <span class="bad">⚠ kesilir</span>' : ''}</td></tr>`; }).join('')}</table>
+        ${isFinite(vs) ? `<p class="muted">⚠ = ideal Vo,pp ${2 * vs} V'u geçiyor: gerçekte kesilir, ölçülen Av daha küçük çıkar.</p>` : ''}`)}
+
+      <h3>4) Çıkış ilk hangi frekansta bozulur?</h3>
+      ${isFinite(vs) ? cstep(1, 'Kesilme sınırı', `<p>Kare dalganın seviyesi R1C1 × 4·V<sub>p</sub>·f. Bu ${vs} V'u geçince kesilir:</p><div class="formula">f &gt; ${vs} / (4 × ${Vp} × ${rc}) = <b>${fq(+lim.toPrecision(4))}</b></div>`) + cstep(2, 'Taramadaki ilk frekans', `<p>${fq(+lim.toPrecision(4))}'in üstündeki ilk tarama frekansı: <b>${fdistTxt(fd)}</b>.</p>`, `Theoretical = none (ideal türev alıcı kesilmez) · ±${vs} V sınırıyla beklenen: ${fdistTxt(fd)}`) : '<p>İdeal op-amp: kesilme yok → <b>none</b>.</p>'}
+
+      <h3>Bonus: kazancın 1 olduğu frekans</h3>
+      ${cstep('+', 'Sinüste |Vo/Vi| = 2π·f·R1C1 = 1', `<div class="formula">f = 1 / (2π × R1C1) = 1 / (2 × 3.1416 × ${rc}) = <b>${fq(+(1 / (2 * Math.PI * RC)).toPrecision(5))}</b></div>`)}
+
+      <h3>Hata yüzdesi (raporda)</h3>
+      <div class="formula">Error % = (Simulation − Experimental) / Simulation × 100<br>Örnek: simülasyon 1.600 V, deney 1.552 V → (1.600 − 1.552) / 1.600 × 100 = <b>3.0 %</b></div>
+      ${B('tip', 'Bütün sayılar tezgâhtaki R1, C1 ve seçtiğin Vi\'den hesaplanır. Vi seçimini değiştirirsen bu sayfa da değişir.')}`;
+  }
+  function calcHtml() {
+    if (!D()) return noCircuit();
+    if (isDiff()) return diffCalc();
+    const d = D();
+    if (hidden() && !dat().checked) return `<h2>🧮 Teorik hesaplamalar — ${d.title}</h2>${B('warn', 'Test devresi: hesaplar, "Kontrol et"ten ya da "Kılavuzu aç"tan sonra görünür.')}`;
+    const f = F0(), w = 2 * Math.PI * f, t = theory(f);
+    if (!t) return '<p>Teori hesaplanamadı (devre eksik mi?).</p>';
+    const parts = Bench.model.comps.filter(c => ['R', 'C', 'L'].includes(c.type)).map(c => `<tr><td>${c.name}</td><td><b>${fmt(c.value, c.type === 'R' ? 'Ω' : c.type === 'C' ? 'F' : 'H')}</b></td></tr>`).join('');
+    return `<h2>🧮 Teorik hesaplamalar — ${d.title}</h2>
+      ${B('simple', `Tablo 1'in teori değerleri ${fq(f)} ve Vi = ${tVi()} Vpp için adım adım.`)}
+      <h3>0) Elimizdeki değerler</h3><table>${parts}<tr><td>f</td><td><b>${fq(f)}</b></td></tr><tr><td>Vi,pp</td><td><b>${tVi()} V</b></td></tr></table>
+      ${cstep(1, 'Açısal frekans', `<div class="formula">ω = 2π × f = 2 × 3.1416 × ${f} = <b>${(+w.toPrecision(5))} rad/s</b></div>`)}
+      ${cstep(2, 'Kondansatör / bobin empedansları', `<p>${reactances(f) || 'Bu devrede C ya da L yok.'}</p>`)}
+      ${wienCalc()}
+      ${cstep(3, 'Kazanç ve faz (fazör analizi)', `<div class="formula">${FORMULA[d.type] || ''}</div><div class="formula">|H| = <b>${t.H.toFixed(4)}</b> · φ = <b>${fph(t.ph)}</b></div>`, `Kazanç = ${t.H.toFixed(4)} · Faz = ${fph(t.ph)}`)}
+      ${cstep(4, 'Çıkış gerilimi', `<div class="formula">Vo,pp = |H| × Vi,pp = ${t.H.toFixed(4)} × ${tVi()} = <b>${t.vo.toFixed(3)} V</b></div>`, `Vo,pp = ${t.vo.toFixed(3)} V`)}
+      ${t.ipk ? cstep(5, 'Akım (tepe)', `<div class="formula">I<sub>peak</sub> = <b>${fmt(t.ipk, 'A', 4)}</b> (Vi'ye göre ${fph(t.iph)})</div>`, `Is,peak = ${fmt(t.ipk, 'A', 4)}`) : ''}
+      <h3>Frekans taraması (teori)</h3>
+      <table><tr><th>f</th><th>|H|</th><th>φ</th><th>Vo,pp</th></tr>${[...new Set([...SWEEP(), f])].sort((a, b) => a - b).map(g => { const x = theory(g); return x ? `<tr><td>${fq(g)}</td><td>${x.H.toFixed(4)}</td><td>${fph(x.ph)}</td><td>${fmt(x.vo, 'V', 3)}</td></tr>` : ''; }).join('')}</table>`;
   }
 
   /* ---------------- test modu ---------------- */
@@ -5266,17 +5390,17 @@ const Guide = (() => {
       ${KEYDOC.map(([g, list]) => `<p style="margin:10px 0 2px;color:var(--accent2);font-weight:700">${g}</p>` + list.map(([id, n, d]) => `<div class="keyrow" data-show="${id}"><span class="kn">${n}</span><span class="kd">${d}</span></div>`).join('')).join('')}`;
 
   /* ---------------- teori ---------------- */
+  const wienCalc = () => { if (!D() || D().id !== 'wien') return ''; const t = theory(50); return `
+      <h3>50 Hz adım adım (rapordaki hesap)</h3>
+      <table><tr><td>ω = 2π·50</td><td>314.16 rad/s</td></tr><tr><td>Z<sub>C1</sub> = Z<sub>C2</sub></td><td>−j3183.1 Ω</td></tr>
+      <tr><td>Z<sub>p</sub></td><td>910.2 − j285.9 Ω = 954.0∠−17.44°</td></tr><tr><td>Z<sub>in</sub></td><td>1910.2 − j3469.0 Ω = 3960.2∠−61.16°</td></tr>
+      <tr><td>H</td><td>0.2409∠+43.72°</td></tr><tr><td>Vo,pp (Vi = ${store.vi} V)</td><td>${t.vo.toFixed(3)} V</td></tr><tr><td>Is,peak</td><td>${(t.ipk * 1e3).toFixed(3)} mA (Vi'den ${t.iph.toFixed(2)}° önde)</td></tr></table>`; };
   function theoryHtml() {
     if (!D()) return noCircuit();
     if (isDiff()) return diffTheory();
     const d = D(), inf = I();
     if (hidden() && !dat().checked) return `<h2>🧠 Teori — ${d.title}</h2>${B('warn', 'Test devresi: teori, "Kontrol et"ten ya da "Kılavuzu aç"tan sonra görünür.')}${B('simple', inf.simple)}`;
     const fc = Circuits.charFreq();
-    const wienExtra = d.id === 'wien' ? (() => { const t = theory(50); return `
-      <h3>50 Hz adım adım (rapordaki hesap)</h3>
-      <table><tr><td>ω = 2π·50</td><td>314.16 rad/s</td></tr><tr><td>Z<sub>C1</sub> = Z<sub>C2</sub></td><td>−j3183.1 Ω</td></tr>
-      <tr><td>Z<sub>p</sub></td><td>910.2 − j285.9 Ω = 954.0∠−17.44°</td></tr><tr><td>Z<sub>in</sub></td><td>1910.2 − j3469.0 Ω = 3960.2∠−61.16°</td></tr>
-      <tr><td>H</td><td>0.2409∠+43.72°</td></tr><tr><td>Vo,pp (Vi = ${store.vi} V)</td><td>${t.vo.toFixed(3)} V</td></tr><tr><td>Is,peak</td><td>${(t.ipk * 1e3).toFixed(3)} mA (Vi'den ${t.iph.toFixed(2)}° önde)</td></tr></table>`; })() : '';
     return `<h2>🧠 Teori — ${d.title}</h2>
       ${B('simple', inf.simple)}
       <div class="formula">${Circuits.diagram()}</div>
@@ -5288,7 +5412,7 @@ const Guide = (() => {
       <p>${fq(F0())}'te: ${reactances(F0())}</p>
       <h3>Karakteristik frekans</h3>
       <p>${inf.charName}: <b>${fc ? fq(+fc.toPrecision(4)) : '—'}</b></p>
-      ${wienExtra}
+      ${wienCalc()}
       <h3>🧮 Hesap makinesi (tezgâhtaki devre için)</h3>
       <div class="calc"><span>f (Hz)</span><input id="cF" value="${F0()}"><span>Vi,pp (V)</span><input id="cV" value="${tVi()}">
         <span>|H|</span><b id="oH"></b><span>φ</span><b id="oP"></b><span>dB</span><b id="oD"></b><span>Vo,pp</span><b id="oV"></b><span>I<sub>peak</sub></span><b id="oI"></b></div>
@@ -5322,7 +5446,7 @@ const Guide = (() => {
   const noCircuit = () => `<h2>Kılavuz yok</h2>${B('simple', 'Bu tezgâhtaki devre için hazır bir kılavuz yok (serbest çalışma). Kılavuzlu bir devre için 📚 Devreler\'den seç.')}<p>${acts(doit('library', '📚 Devre kütüphanesini aç'))}</p>`;
 
   /* ---------------- panel çizimi ---------------- */
-  const TABS = [['lab', '🧪 Lab'], ['tables', '📋 Tablolar'], ['howto', '🎯 Nasıl?'], ['keys', '🎛️ Tuşlar'], ['theory', '🧠 Teori'], ['specs', '📘 Cihaz']];
+  const TABS = [['lab', '🧪 Lab'], ['tables', '📋 Tablolar'], ['howto', '🎯 Nasıl?'], ['keys', '🎛️ Tuşlar'], ['theory', '🧠 Teori'], ['calc', '🧮 Teorik hesaplar'], ['specs', '📘 Cihaz']];
   let tabsEl, bodyEl, STEPS = [];
   function init() {
     tabsEl = document.getElementById('gTabs'); bodyEl = document.getElementById('gBody');
@@ -5376,6 +5500,7 @@ const Guide = (() => {
       else if (store.tab === 'howto') h = howtoHtml();
       else if (store.tab === 'keys') h = keysHtml();
       else if (store.tab === 'theory') h = theoryHtml();
+      else if (store.tab === 'calc') h = calcHtml();
       else h = specsHtml();
     } catch (e) { console.error(e); h = `<p>Kılavuz çizilemedi: ${e.message}</p>`; }
     bodyEl.innerHTML = `<div class="${quiet ? '' : 'fade'}">${h}</div>`;
