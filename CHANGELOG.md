@@ -1,5 +1,11 @@
 # Değişiklik günlüğü
 
+## v1.2.0 — ⭐ Lab 2: op-amp türev alıcı (Prelab 02)
+- Yeni laboratuvar deneyi: **Lab 2 — Op-amp türev alıcı** (R1 = 1 kΩ, C1 = 1 µF, LM741 ±15 V). Kütüphanede ⭐ YENİ rozetiyle, ilk açılışta bildirim
+- Adım adım kılavuz: 1 kHz sinüste Vo,peak, 100 Hz üçgende iki çıkış seviyesi, 7 frekanslı üçgen tarama (Av = Vo,pp / Vi,pp), ilk bozulma frekansı
+- Vi,peak seçimi S'ye göre (4 / 5 / 6 V), Prelab Table 1 ile aynı tablo, Word'e kopyala / CSV, teori sekmesi
+- Op-amp için besleme seçeneği: ±15 V (çıkış ≈ ±13 V'ta doyar/kırpılır). Eski devreler değişmedi (ideal op-amp varsayılan)
+
 ## v1.1.0 — yakınlaştırma araçları
 - Osiloskop boyutu: 🔍 − / + (%60–%250), ⤢ Sığdır, ⛶ Tam ekran
 - 🔎 Büyüteç: ekranın üstünde gezdirince o bölgeyi 3× büyütür (imleçleri sıfır geçişine tam oturtmak için)

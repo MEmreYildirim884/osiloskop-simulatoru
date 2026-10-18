@@ -17,7 +17,7 @@ Kurulum yok, hesap yok. Linki aç ve kullan. Bilgisayarda, tablette ve telefonda
 |---|---|
 | 🎛️ **Gerçekçi ön panel** | Tüm tuşlar ve düğmeler, alt/yan menüler, Autoset, Measure (36 ölçüm), Cursor, Math (CH1 − CH2, FFT), XY, Average, Run/Stop, Single… Değerler cihazın teknik özelliklerine göre: 8 bit ADC, 1 GSa/s, 1 mV–10 V/div, 5 ns–100 s/div. |
 | 🔌 **Devre tezgâhı** | Direnç, kondansatör, bobin, diyot, jeneratör ve op-amp sürükle-bırak eklenir. Devre gerçek zamanlı çözülür (MNA, transient). Problar ×1/×10, timsah klipsi yanlış yere takılırsa kısa devre uyarısı verir. |
-| 📚 **30 hazır devre** | ⭐ EE212 Lab 1 (Wien RC ağı) · 🎓 13 öğretmeli devre (RC, CR, RL, LR, seri/paralel RLC, iki kademeli RC/CR, lag, lead, Twin-T, yüklü RC) · 📝 16 test devresi (kılavuz gizli). |
+| 📚 **31 hazır devre** | ⭐ EE212 Lab 1 (Wien RC ağı) · ⭐ Lab 2 (op-amp türev alıcı, LM741 ±15 V) · 🎓 13 öğretmeli devre (RC, CR, RL, LR, seri/paralel RLC, iki kademeli RC/CR, lag, lead, Twin-T, yüklü RC) · 📝 16 test devresi (kılavuz gizli). |
 | 🧪 **Adım adım kılavuz** | Her devre için hazırlık + 5 görev: Vi, Vo/kazanç, faz (imleçle), akım, frekans taraması. Her adımda "👁 Göster" ilgili tuşu yanıp sönen halkayla işaretler, "⚡ Benim için yap" o işi senin yerine yapar, canlı ölçüm değerlerini gösterir ve teoriyle karşılaştırır. |
 | 📝 **Kendini test et** | Test devrelerinde kılavuz ve teorik değerler gizli. Ölç, tabloya yaz, **Kontrol et** → skorunu gör. |
 | ❗ **Ekran açıklamaları** | Ekrandaki turuncu **!** işaretlerine bas. İmleç kutusu, ölçüm satırı, alt/üst bilgi çubukları ve menüler o anki değerlerle satır satır açıklanır. |

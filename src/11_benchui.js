@@ -84,7 +84,7 @@ const BenchUI = (() => {
       case 'DC': return [`${nm}DC kaynak ${fmt(c.value, 'V')}`, 'Sabit gerilim verir.'];
       case 'GND': return ['Toprak', 'Devrenin 0 V referansı. Osiloskobun şasesi (prob timsahları) de buraya bağlıdır.'];
       case 'D': return [`${nm}Diyot 1N4148`, 'Akımı yalnız anottan katoda geçirir (~0.6–0.7 V düşüm).'];
-      case 'OA': return [`${nm}İdeal op-amp`, 'Çok yüksek kazançlı fark yükselteci.'];
+      case 'OA': return [`${nm}${c.vsat ? 'Op-amp (LM741, ±15 V)' : 'İdeal op-amp'}`, 'Çok yüksek kazançlı fark yükselteci.' + (c.vsat ? ` Çıkış besleme yüzünden en fazla ±${c.vsat} V olabilir (doyum / kırpılma).` : '')];
       case 'COMP': return ['Prob kompanzasyon çıkışı', 'Osiloskobun ön panelindeki 2 V / 1 kHz kare dalga çıkışı.'];
     }
     return null;
@@ -145,7 +145,7 @@ const BenchUI = (() => {
       case 'D': t = '1N4148'; break;
       case 'DC': t = Units.fmt(c.value, 'V'); break;
       case 'FG': t = `${{ sine: 'Sine', square: 'Square', triangle: 'Triangle' }[c.wave]} ${Units.fmt(c.freq, 'Hz', 4)}|${Units.fmt(c.vpp, 'Vpp')}${c.offset ? ' ' + Units.fmt(c.offset, 'V') + ' DC' : ''}|Rout ${Units.fmt(c.rout, 'Ω')}`; break;
-      case 'OA': t = 'ideal'; break;
+      case 'OA': t = c.vsat ? 'LM741 ±15V' : 'ideal'; break;
       default: return '';
     }
     if (c.name) t = `<tspan font-weight="700" fill="#7a2e00">${c.name}</tspan> ` + t;
@@ -261,7 +261,7 @@ const BenchUI = (() => {
   /* ---------------- özellik paneli ---------------- */
   // jeneratör frekans düğmeleri: seçili kütüphane devresinin frekansları
   const labF = () => { const d = Circuits.cur; return d ? [...new Set([d.f, ...d.sweep])].sort((a, b) => a - b) : [10, 30, 50, 100, 159.2, 300, 1000, 3000]; };
-  const LAB_V = [4, 8, 12];
+  const LAB_V = () => (Circuits.cur && Circuits.cur.vChips) || [4, 8, 12];
   /** 1-2-5 dizisinde bir sonraki/önceki değer */
   function next125(v, dir) {
     const e = Math.floor(Math.log10(v) + 1e-9), m = v / Math.pow(10, e);
@@ -333,11 +333,13 @@ const BenchUI = (() => {
         h += `<div class="chips">${labF().map(f => `<span class="chip ${Math.abs(c.freq - f) < f * 1e-3 ? 'on' : ''}" data-f="${f}">${Units.fmt(f, 'Hz', 4).replace('.000', '').replace(/\.0(?=[a-zA-Z])/, '')}</span>`).join('')}</div>`;
         h += `<input type="range" data-k="freqlog" min="0" max="6" step="0.001" value="${Math.log10(c.freq)}">`;
         h += inp('vpp', 'Genlik (Vpp)', Units.fmt(c.vpp, '', 4));
-        h += `<div class="chips">${LAB_V.map(v => `<span class="chip ${Math.abs(c.vpp - v) < 1e-6 ? 'on' : ''}" data-v="${v}">${v} Vpp</span>`).join('')}</div>`;
+        h += `<div class="chips">${LAB_V().map(v => `<span class="chip ${Math.abs(c.vpp - v) < 1e-6 ? 'on' : ''}" data-v="${v}">${v} Vpp</span>`).join('')}</div>`;
         h += inp('offset', 'DC ofset (V)', Units.fmt(c.offset, '', 4)) + inp('rout', 'Çıkış direnci (Ω)', Units.fmt(c.rout, '', 3));
         h += `<div class="hint">Vpp = tepeden tepeye, <b>yüksüz</b> çıkış gerilimi. Jeneratörün 50 Ω iç direnci yüzünden devreye bağlanınca biraz düşer — bu yüzden laboratuvarda Vi'yi her zaman osiloskopla (CH1) kontrol et.</div>`;
         break;
-      case 'OA': h += `<div class="hint">İdeal op-amp: A = 10⁵, Ro = 1 Ω, besleme sınırı yok. Pinler: − (üst), + (alt), çıkış.</div>`; break;
+      case 'OA':
+        h += `<label>Besleme<select data-k="vsat">${[[0, 'Yok (ideal, sınırsız)'], [13, '±15 V (LM741 → çıkış ±13 V)']].map(([v, l]) => `<option value="${v}" ${(c.vsat || 0) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
+        h += `<div class="hint">A = 10⁵, Ro = 1 Ω. Pinler: − (üst), + (alt), çıkış. ${c.vsat ? `Çıkış ±${c.vsat} V'u geçemez: gerçek LM741 ±15 V beslemede yaklaşık ±13 V'ta doyar.` : 'Besleme sınırı yok: çıkış istediği kadar büyüyebilir.'}</div>`; break;
       case 'GND': h += `<div class="hint">Devre toprağı = osiloskop şasesi (şebeke toprağı).</div>`; break;
       case 'COMP': h += `<div class="hint">Osiloskobun prob kompanzasyon çıkışı: 0/2 V kare dalga, ${Units.fmt(State.S.util.compFreq, 'Hz')}, ~1 kΩ çıkış direnci (TAHMIN). ⏚ ucu şaseye bağlıdır.</div>`; break;
     }
@@ -350,6 +352,7 @@ const BenchUI = (() => {
       const apply = () => {
         checkpoint();
         if (k === 'wave') c.wave = el.value;
+        else if (k === 'vsat') { c.vsat = +el.value; B.changed(); render(); renderProps(true); return; }
         else if (k === 'freqlog') { c.freq = +Math.pow(10, +el.value).toPrecision(4); const f = propsEl.querySelector('[data-k=freq]'); if (f) f.value = Units.fmt(c.freq, '', 4); }
         else {
           const v = Units.parse(el.value);

@@ -14,11 +14,11 @@ const Guide = (() => {
   const fmt = Units.fmt;
   const S = () => State.S;
   const LS = 'ee212.lab1.v1';
-  const DEF_STORE = { tab: 'lab', vi: 4, open: true, circuit: 'wien', steps: {}, data: {}, reveal: {} };
+  const DEF_STORE = { tab: 'lab', vi: 4, vi2: 8, open: true, circuit: 'wien', steps: {}, data: {}, reveal: {}, seen: {} };
   const store = (() => {
     let o;
     try { o = Object.assign({}, DEF_STORE, JSON.parse(localStorage.getItem(LS) || '{}')); } catch (e) { o = Object.assign({}, DEF_STORE); }
-    for (const k of ['steps', 'data', 'reveal']) if (!o[k] || typeof o[k] !== 'object') o[k] = {};
+    for (const k of ['steps', 'data', 'reveal', 'seen']) if (!o[k] || typeof o[k] !== 'object') o[k] = {};
     // eski sürümden (tek devre) geçiş
     if (o.t1 || o.t2) { o.data.wien = { t1: o.t1 || {}, t2: o.t2 || {} }; delete o.t1; delete o.t2; }
     if (typeof o.step === 'number') { o.steps.wien = o.step; delete o.step; }
@@ -32,7 +32,10 @@ const Guide = (() => {
   const isTest = () => D() && D().group === 'test';
   const hidden = () => isTest() && !store.reveal[store.circuit];
   const dat = () => store.data[store.circuit] || (store.data[store.circuit] = { t1: {}, t2: {} });
-  const tVi = () => D() && D().id === 'wien' ? store.vi : (D() ? D().vpp : 4);
+  const tVi = () => D() && D().id === 'wien' ? store.vi : D() && D().type === 'diff' ? store.vi2 : (D() ? D().vpp : 4);
+  const isDiff = () => !!D() && D().type === 'diff';
+  /** Tablo 1 anahtarları (devre tipine göre) */
+  const T1K = (d = D()) => d && d.type === 'diff' ? ['sinVo', 'vpos', 'vneg', 'fdist'] : ['vi', 'vo', 'is', 'gain', 'phase'];
   const F0 = () => D() ? D().f : 50;
   const SWEEP = () => D() ? D().sweep : [];
   const stepIdx = () => store.steps[store.circuit] || 0;
@@ -92,6 +95,9 @@ const Guide = (() => {
     vr: () => { const c = curNow(); return c ? { t: fmt(c.pp, 'V', 4) } : { t: 'düzen kurulmadı', bad: true }; },
     is: () => { const c = curNow(), si = senseInfo(); return c && si ? { t: fmt(c.pp / 2 / si.R, 'A', 4) } : { t: '?', bad: true }; },
     phI: () => { const c = curNow(); return c && c.ph ? { t: (c.ph.v >= 0 ? '+' : '') + c.ph.v.toFixed(1) + '°' } : { t: '?', bad: true }; },
+    vmax2: () => { const r = val('Max', 'CH2'); return r ? { t: fmt(r.v, 'V', 4) } : { t: '?', bad: true }; },
+    vmin2: () => { const r = val('Min', 'CH2'); return r ? { t: fmt(r.v, 'V', 4) } : { t: '?', bad: true }; },
+    thAv: () => { const g = fg(); return { t: g ? dth(g.freq).av.toFixed(3) : '—' }; },
     status: () => ({ t: State.R.status, bad: State.R.status !== "Trig'd" }),
     vdiv1: () => ({ t: fmt(State.vdiv(0), 'V') + '/div' }), vdiv2: () => ({ t: fmt(State.vdiv(1), 'V') + '/div' }), tdiv: () => ({ t: fmt(State.tdiv(), 's') + '/div' }),
   };
@@ -112,14 +118,17 @@ const Guide = (() => {
     cursH: () => S().cursor.mode === 'H',
     math: mathSub, curOK: () => !!curNow(),
     t2: () => SWEEP().every(f => isFinite(dat().t2[f])),
-    t1: () => ['vi', 'vo', 'is', 'gain', 'phase'].every(k => isFinite(dat().t1[k])),
+    t1: () => T1K().every(k => isFinite(dat().t1[k])),
+    fgTri: () => fg() && fg().wave === 'triangle' && freqOK(100), fgS1k: () => fg() && fg().wave === 'sine' && freqOK(1000),
+    mMax2: () => hasMeas('Max', 'CH2'), mMin2: () => hasMeas('Min', 'CH2'),
+    capSin: () => isFinite(dat().t1.sinVo), capTri: () => isFinite(dat().t1.vpos) && isFinite(dat().t1.vneg), fdist: () => isFinite(dat().t1.fdist),
     xy: () => S().acq.xy,
     fchar: () => { const fc = Circuits.charFreq(); return fc && fg() && Math.abs(fg().freq / fc - 1) < 0.03; },
   };
 
   /* ---------------- eylemler ("⚡ Yap") ---------------- */
   let flash = null;
-  function note(t, lvl = 'good') { flash = { t, lvl, until: performance.now() + 4500 }; renderTip(true); }
+  function note(t, lvl = 'good', ms = 4500) { flash = { t, lvl, until: performance.now() + ms }; renderTip(true); }
   function attachProbe(ch, nodeName) {
     const g = node(nodeName); if (!g) return note(`"${nodeName}" düğümü bulunamadı — devreyi yeniden yükle.`, 'warn');
     BenchUI.checkpoint();
@@ -232,6 +241,12 @@ const Guide = (() => {
     if (probeNode(1) !== 'Vo') attachProbe(1, 'Vo');
     if (probeNode(0) !== 'Vi') attachProbe(0, 'Vi');
     S().math.on = false; S().acq.xy = false;
+    if (isDiff()) {
+      // Prelab 02: üçgen dalga, genlik tarama boyunca sabit (hep aynı jeneratör ayarı)
+      setFG({ freq: f, wave: 'triangle', vpp: tVi(), offset: 0 }); ACT.ch12(); autoset();
+      addMeas('Pk-Pk', 'CH1'); addMeas('Pk-Pk', 'CH2');
+      return note(`Jeneratör: üçgen ${fq(f)}, ${tVi()} Vpp. Autoset yapıldı. CH1 ve CH2 Pk-Pk değerlerini oku.`);
+    }
     setFG({ freq: f, wave: 'sine' });
     ACT.ch12();
     const ok = f >= 25 ? autoset() : (manualSet(f), false);
@@ -242,11 +257,19 @@ const Guide = (() => {
   function sweepSave(f) {
     const g = fg();
     if (!freqOK(f)) return note(`Jeneratör şu an ${g ? fq(g.freq) : '?'} — önce "Ayarla"ya bas.`, 'warn');
+    if (isDiff()) {
+      if (g.wave !== 'triangle') return note('Bu tablo üçgen dalga içindir — önce "Ayarla"ya bas.', 'warn');
+      const a = val('Pk-Pk', 'CH1'), b = val('Pk-Pk', 'CH2');
+      if (!a || !b) return note('Vi,pp / Vo,pp ölçülemedi (dalga ekrandan taşıyor mu?).', 'warn');
+      const T = dat(); T.t2[f] = +(b.v / a.v).toFixed(4); (T.pp || (T.pp = {}))[f] = [+a.v.toFixed(4), +b.v.toFixed(4)]; save(); render();
+      return note(`${fq(f)}: Vi,pp = ${fmt(a.v, 'V', 4)}, Vo,pp = ${fmt(b.v, 'V', 4)} → Av = ${(b.v / a.v).toFixed(3)} kaydedildi.`);
+    }
     const r = val('Phase', 'CH1', 'CH2'); if (!r) return note('Faz ölçülemedi (dalga ekrandan taşıyor ya da ekranda tam periyot yok).', 'warn');
     dat().t2[f] = +r.v.toFixed(2); save(); render();
     note(`${fq(f)}: φ = ${r.v.toFixed(2)}° kaydedildi.`);
   }
   function captureT1() {
+    if (isDiff()) return captureDiff();
     const got = [], T = dat().t1;
     if (!freqOK(F0())) return note(`Tablo 1 için jeneratör ${fq(F0())} olmalı.`, 'warn');
     const vi = val('Pk-Pk', 'CH1'), vo = val('Pk-Pk', 'CH2'), ph = val('Phase', 'CH1', 'CH2');
@@ -265,7 +288,7 @@ const Guide = (() => {
   /* ---------------- devre yükleme / kütüphane ---------------- */
   function loadCircuit(id) {
     BenchUI.checkpoint();
-    store.circuit = id; save();
+    store.circuit = id; if (Circuits.get(id) && Circuits.get(id).isNew) store.seen[id] = true; save();
     App.loadPreset(id);
     if (Circuits.get(id)) {
       // osiloskop fabrika ayarında başlar; öğrenci Autoset'e kendisi basar
@@ -284,17 +307,17 @@ const Guide = (() => {
   const EXTRA = [['comp', 'Prob kompanzasyon', '2 V / 1 kHz kare dalga'], ['rc', 'RC filtre (159 Hz, eski)', 'Serbest çalışma'], ['rlc', 'Seri RLC (eski)', 'Serbest çalışma'], ['rect', 'Yarım dalga doğrultucu', 'Diyot + kondansatör'], ['empty', 'Boş tezgâh', 'Kendi devreni kur']];
   function cstatus(id) {
     const d = store.data[id]; if (!d) return '';
-    const t1 = ['vi', 'vo', 'is', 'gain', 'phase'].filter(k => isFinite(d.t1 && d.t1[k])).length, t2 = Object.keys(d.t2 || {}).length;
+    const K = T1K(Circuits.get(id)), t1 = K.filter(k => isFinite(d.t1 && d.t1[k])).length, t2 = Object.keys(d.t2 || {}).length;
     if (d.checked && d.score) return `<span class="cst ok">Skor ${d.score}</span>`;
-    if (t1 === 5 && t2 >= 7) return '<span class="cst ok">✓ Tamam</span>';
-    if (t1 || t2) return `<span class="cst">Devam: ${t1 + t2}/12</span>`;
+    if (t1 === K.length && t2 >= 7) return '<span class="cst ok">✓ Tamam</span>';
+    if (t1 || t2) return `<span class="cst">Devam: ${t1 + t2}/${K.length + 7}</span>`;
     return '';
   }
   function card(d) {
     const inf = Circuits.info(d);
-    return `<div class="ccard ${d.group} ${d.id === store.circuit ? 'cur' : ''}" data-load="${d.id}">
-      <div class="ct">${d.title}</div><div class="ck">${inf.kind}</div>
-      <div class="cf">${fq(d.f)} · ${d.id === 'wien' ? 'S\'ye göre' : d.vpp} Vpp ${d.group === 'test' ? '· <b>kılavuz gizli</b>' : '· kılavuzlu'}</div>${cstatus(d.id)}</div>`;
+    return `<div class="ccard ${d.group} ${d.isNew ? 'new' : ''} ${d.id === store.circuit ? 'cur' : ''}" data-load="${d.id}">
+      <div class="ct">${d.group === 'lab' ? '⭐ ' : ''}${d.title}${d.isNew ? '<span class="newb">YENİ</span>' : ''}</div><div class="ck">${inf.kind}</div>
+      <div class="cf">${fq(d.f)}${d.type === 'diff' ? ' sinüs + üçgen' : ''} · ${d.group === 'lab' ? 'S\'ye göre' : d.vpp} Vpp ${d.group === 'test' ? '· <b>kılavuz gizli</b>' : '· kılavuzlu'}</div>${cstatus(d.id)}</div>`;
   }
   function openLibrary() {
     const modal = document.getElementById('modal'), box = document.getElementById('modalBox');
@@ -302,17 +325,26 @@ const Guide = (() => {
     box.classList.add('lib');
     box.innerHTML = `<div class="libHead"><h2>📚 Devre Kütüphanesi</h2><button class="ui" data-close="1">✕ Kapat</button></div>
       <p class="muted">Bir karta tıkla → devre tezgâha kurulur, kılavuz o devre için hazırlanır. Osiloskop fabrika ayarına döner (Autoset'e sen basarsın).</p>
-      <h3>⭐ Laboratuvar deneyi</h3><div class="cgrid">${G('lab').map(card).join('')}</div>
+      <h3>⭐ Laboratuvar deneyleri</h3><div class="cgrid">${G('lab').map(card).join('')}</div>
       <h3>🎓 Öğretmeli devreler <small>— her görev adım adım anlatılır (${G('learn').length})</small></h3><div class="cgrid">${G('learn').map(card).join('')}</div>
       <h3>📝 Kendini test et <small>— kılavuz ve cevaplar gizli; bitirince "Kontrol et" (${G('test').length})</small></h3><div class="cgrid">${G('test').map(card).join('')}</div>
       <h3>🧰 Diğer</h3><div class="cgrid">${EXTRA.map(([id, t, k]) => `<div class="ccard other ${id === store.circuit ? 'cur' : ''}" data-load="${id}"><div class="ct">${t}</div><div class="ck">${k}</div><div class="cf">kılavuz yok</div></div>`).join('')}</div>`;
     modal.style.display = 'flex';
+    newBadge();
     box.onclick = (e) => {
       const c = e.target.closest('[data-load]'); if (c) { modal.style.display = 'none'; box.classList.remove('lib'); box.onclick = null; loadCircuit(c.dataset.load); return; }
       if (e.target.closest('[data-close]')) { modal.style.display = 'none'; box.classList.remove('lib'); box.onclick = null; }
     };
   }
+  /** Henüz açılmamış yeni deney varsa 📚 Devreler düğmesinde ⭐ */
+  function newBadge() {
+    const b = document.getElementById('libBtn'); if (!b) return;
+    const n = Circuits.DEFS.filter(d => d.isNew && !store.seen[d.id]);
+    b.classList.toggle('hasNew', n.length > 0);
+    b.title = n.length ? `Yeni: ${n.map(d => d.title).join(', ')}` : 'Tüm devreler: laboratuvar deneyleri, öğretmeli devreler, test devreleri';
+  }
   function updateHeader() {
+    newBadge();
     const el = document.getElementById('curName'); if (!el) return;
     const d = D(), x = EXTRA.find(e => e[0] === store.circuit);
     el.innerHTML = d ? `${d.group === 'test' ? '📝' : d.group === 'lab' ? '⭐' : '🎓'} ${d.title}` : (x ? '🧰 ' + x[1] : '—');
@@ -343,6 +375,7 @@ const Guide = (() => {
     lead: 'H = R2 / (R2 + Z<sub>1</sub>), Z<sub>1</sub> = R1 ∥ 1/(jωC1)',
     twint: 'İki T yolunun düğüm denklemleri; çentik: f = 1/(2πRC) (R3 = R/2, C3 = 2C)',
     rc_loaded: 'H = Z<sub>p</sub> / (R1 + Z<sub>p</sub>), Z<sub>p</sub> = R2 ∥ 1/(jωC) &nbsp;·&nbsp; DC kazanç = R2/(R1+R2)',
+    diff: 'v<sub>o</sub>(t) = −R1·C1 · dv<sub>i</sub>/dt &nbsp;·&nbsp; H(jω) = −jωR1C1 &nbsp;·&nbsp; |H| = ωR1C1, φ = −90°',
   };
   function reactances(f) {
     const out = [];
@@ -356,6 +389,7 @@ const Guide = (() => {
   const nodeNames = () => [...new Set(Object.values(Bench.model.netNames))];
 
   function buildSteps() {
+    if (isDiff()) return diffSteps();
     const d = D(), inf = I(), isW = d.id === 'wien';
     const t0 = theory(F0()) || { H: 0, ph: 0, vo: 0, ipk: 0, iph: 0, vr: 0 };
     const si = senseInfo();
@@ -558,6 +592,226 @@ const Guide = (() => {
     return steps;
   }
 
+  /* ---------------- Lab 2 (Prelab 02): op-amp türev alıcı ----------------
+   * Tablo 1: 1 kHz sinüste Vo,peak · 100 Hz üçgende iki Vo seviyesi · ilk bozulma frekansı
+   * Tablo 2 (t2): üçgen taramada Av = Vo,pp / Vi,pp (pp: ölçülen Vi,pp ve Vo,pp)
+   * Teori ideal türev alıcıdan: vo = −R1·C1·dvi/dt (op-amp doyumu teoriye girmez; kırpılan satırlar işaretlenir) */
+  const vsatNow = () => { const u = Bench.model.comps.find(c => c.type === 'OA'); return u && u.vsat ? u.vsat : Infinity; };
+  function dth(f) {
+    const R = comp('R1'), C = comp('C1'), RC = R && C ? R.value * C.value : 1e-3, Vp = tVi() / 2;
+    const slope = 4 * Vp * f;            // üçgen: yarım periyotta (T/2) 2·Vp değişir → |dvi/dt| = 4·Vp·f
+    const lvl = RC * slope;              // çıkış seviyesi (kare dalga)
+    return { RC, Vp, slope, lvl, av: 4 * f * RC, vopp: 2 * lvl, clip: lvl > vsatNow(), sinPk: 2 * Math.PI * f * RC * Vp };
+  }
+  const fdistTh = () => SWEEP().find(f => dth(f).clip) || 0;      // 0 = taramada bozulma yok
+  const fdistTxt = (f) => f ? fq(f) : 'yok (ideal)';
+  const fdistSel = () => { const v = dat().t1.fdist; return `<select class="ui" data-t1="fdist">${[NaN, 0, ...SWEEP()].map(f => `<option value="${isNaN(f) ? '' : f}" ${v === f || (isNaN(f) && !isFinite(v)) ? 'selected' : ''}>${isNaN(f) ? '— seç —' : f ? fq(f) : 'yok (bozulma görmedim)'}</option>`).join('')}</select>`; };
+  const viSel2 = () => `<p><b>Vi,peak seçimi (S'ye göre):</b> 0 ≤ S ≤ 6 → <b>4 V</b> · 6 &lt; S ≤ 12 → <b>5 V</b> · 12 &lt; S ≤ 18 → <b>6 V</b>. Seçimin:
+    <select id="viSel2" class="ui">${[8, 10, 12].map(v => `<option value="${v}" ${store.vi2 === v ? 'selected' : ''}>Vi,peak = ${v / 2} V (${v} Vpp)</option>`).join('')}</select></p>`;
+  function captureDiff() {
+    const g = fg(), T = dat().t1, got = [];
+    if (probeNode(1) !== 'Vo') return note('CH2 probu Vo\'da olmalı.', 'warn');
+    if (g && g.wave === 'sine' && freqOK(1000)) { const r = val('Max', 'CH2'); if (r) { T.sinVo = +r.v.toFixed(4); got.push('Vo,peak (sinüs)'); } }
+    else if (g && g.wave === 'triangle' && freqOK(100)) {
+      const lo = val('Min', 'CH2'), hi = val('Max', 'CH2');
+      if (lo && hi) { T.vpos = +lo.v.toFixed(4); T.vneg = +hi.v.toFixed(4); got.push('iki Vo seviyesi (üçgen)'); }
+    } else return note('Ekrandan al: jeneratör 1 kHz sinüs (G1) ya da 100 Hz üçgen (G2) olmalı. Tarama satırları için ▶ / 📥 kullan.', 'warn');
+    save(); render();
+    note(got.length ? `Kaydedildi: ${got.join(', ')}.` : 'Ölçülemedi — Autoset yapıp tekrar dene.', got.length ? 'good' : 'warn');
+  }
+  Object.assign(ACT, {
+    fgS1k: () => { setFG({ wave: 'sine', freq: 1000, vpp: tVi(), offset: 0 }); note(`Jeneratör: sinüs, 1 kHz, ${tVi()} Vpp (Vi,peak = ${tVi() / 2} V).`); },
+    fgTri: () => { setFG({ wave: 'triangle', freq: 100, vpp: tVi(), offset: 0 }); ACT.ch12(); autoset(); addMeas('Max', 'CH2'); addMeas('Min', 'CH2'); note(`Jeneratör: üçgen, 100 Hz, ${tVi()} Vpp. Autoset yapıldı; CH2 Max ve Min eklendi.`); },
+    mMax2: () => { Menus.open('measure'); addMeas('Max', 'CH2'); },
+    mMin2: () => { Menus.open('measure'); addMeas('Min', 'CH2'); },
+    capSin: () => captureDiff(), capTri: () => captureDiff(),
+    unity: () => { const fc = Circuits.charFreq(); if (!fc) return; setFG({ wave: 'sine', freq: +fc.toPrecision(4), vpp: tVi() }); ACT.ch12(); autoset(); addMeas('Pk-Pk', 'CH1'); addMeas('Pk-Pk', 'CH2'); },
+  });
+
+  function diffSteps() {
+    const d = D(), inf = I(), s1 = dth(1000), t100 = dth(100), Vp = tVi() / 2, vs = vsatNow(), fd = fdistTh();
+    const RCt = fmt(s1.RC, 's'), steps = [];
+    steps.push({ kind: 'start', code: 'Başla', t: 'Bu deneyde ne yapacağız?', chk: 'loaded', html: () => `
+      <div class="ccard lab new cur" style="cursor:default"><div class="ct">⭐ ${d.title}<span class="newb">YENİ</span></div><div class="ck">${inf.kind} · Prelab 02</div><div class="cf">R1 = 1 kΩ · C1 = 1 µF · LM741 (±15 V) · Vi,peak = ${Vp} V</div></div>
+      ${B('simple', inf.simple + ' Önce <b>sinüs</b>, sonra <b>üçgen</b> dalga vereceğiz. Üçgenin eğimi sabit olduğu için çıkış <b>kare dalga</b> olur.')}
+      ${viSel2()}
+      ${B('warn', `Dikkat: Prelab'da verilen değer <b>tepe</b> değer (Vi,peak = ${Vp} V). Jeneratörün genlik ayarı <b>tepeden tepeye</b> (Vpp) olduğu için jeneratöre <b>${tVi()} Vpp</b> yazacağız.`)}
+      <h3>Görev haritası (Prelab 02 · Table 1)</h3>
+      <table><tr><th>Görev</th><th>Ne ölçülür</th><th>Nereye</th></tr>
+        <tr><td><b>G1</b></td><td>1 kHz sinüste Vo,peak</td><td>Tablo 1 · Sinusoidal Output</td></tr>
+        <tr><td><b>G2</b></td><td>100 Hz üçgende iki çıkış seviyesi (Vi yükselirken / düşerken)</td><td>Tablo 1 · Vo,max (+ / − eğim)</td></tr>
+        <tr><td><b>G3</b></td><td>7 frekansta Vi,pp, Vo,pp ve Av = Vo,pp / Vi,pp</td><td>Tablo 1 · Triangular Gain</td></tr>
+        <tr><td><b>G4</b></td><td>Çıkışın ilk bozulduğu (kırpıldığı) frekans</td><td>Tablo 1 · son satır</td></tr></table>
+      ${B('tip', 'Prelab\'daki tablonun "Theoretical" sütunu kılavuzda <b>teori</b> olarak yazıyor. "Simulation" sütununu bu simülatörden ya da LTspice\'tan, "Experimental" sütununu laboratuvarda doldurursun.')}
+      <ol class="steps"><li data-chk="loaded">Devre tezgâhta kurulu olmalı. ${acts(doit('load', '⚡ Devreyi (yeniden) kur'))}</li></ol>` });
+
+    steps.push({ kind: 'prep', code: 'H1', t: 'Devreyi tanı, probları bağla', chk: ['p1Vi', 'p2Vo', 'gnd'], html: () => `
+      ${B('simple', 'Tezgâhta üçgen şeklinde bir op-amp var. Girişte C1, geri beslemede (çıkıştan − ucuna) R1. Op-amp\'ın + ucu toprakta.')}
+      <div class="formula">${Circuits.diagram()}</div>
+      <ol class="steps">
+        <li data-chk="p1Vi"><b>Sarı CH1 probunun ucunu Vi'ye</b> tak (jeneratörün çıkışı, C1'in sol ucu).</li>
+        <li data-chk="p2Vo"><b>Mavi CH2 probunun ucunu Vo'ya</b> tak (op-amp'ın çıkışı).</li>
+        <li data-chk="gnd">İki probun da <b>siyah timsahını GND'ye</b> tak. ${acts(doit('probes'))}</li>
+      </ol>
+      ${B('why', 'Op-amp − ucunu + ucuyla aynı gerilimde tutmaya çalışır. + ucu toprakta olduğu için − ucu da ≈ 0 V olur: buna <b>sanal toprak</b> denir (tezgâhta <b>V−</b>). Bu yüzden C1\'in sağ ucu 0 V\'ta gibidir ve C1\'den geçen akım i = C1·dVi/dt olur. Bu akım R1\'den geçer: Vo = −R1·i.')}
+      ${B('warn', `Gerçek LM741 ±15 V ile beslenir. Çıkış bu gerilimleri geçemez; pratikte yaklaşık <b>±${vs} V</b>'ta takılır (<b>doyum</b>). Tezgâhta op-amp'a tıklarsan besleme ayarını görürsün. Laboratuvarda beslemeyi bağlamayı unutma: <b>+15 V → pin 7</b>, <b>−15 V → pin 4</b>, ortak uç → GND.`)}
+      ${B('tip', 'LM741 bacakları: 2 = − giriş, 3 = + giriş, 6 = çıkış, 7 = +V, 4 = −V.')}` });
+
+    steps.push({ kind: 'prep', code: 'H2', t: 'Jeneratörü ayarla: 1 kHz sinüs', chk: ['fgS1k', 'fgAmp'], html: () => `
+      ${B('simple', `Prelab'daki giriş: Vi(t) = ${Vp}·cos(6283.18·t) V. 6283.18 = 2π·1000 → <b>f = 1 kHz</b>. Tepe ${Vp} V → <b>${tVi()} Vpp</b>.`)}
+      <ol class="steps">
+        <li>Tezgâhta <b>jeneratöre (FG1) tıkla</b>; sağda ayarları açılır.</li>
+        <li data-chk="fgS1k">Dalga: <b>Sinüs</b>, frekans: <b>1 kHz</b> (çipe tıkla).</li>
+        <li data-chk="fgAmp">Genlik: <b>${tVi()} Vpp</b>. ${acts(doit('fgS1k'))}</li>
+      </ol>
+      ${B('why', `Periyot T = 1/f = 1 ms. Sinüsün türevi yine sinüstür ama 90° kayar ve ω kadar büyür: |Vo/Vi| = ωR1C1 = 6283.18 × ${RCt} = <b>${(2 * Math.PI * 1000 * s1.RC).toFixed(3)}</b>.`)}` });
+
+    steps.push({ kind: 'prep', code: 'H3', t: 'Kanalları aç ve Autoset yap', chk: ['ch1on', 'ch2on', 'trig'], html: () => `
+      <ol class="steps">
+        <li data-chk="ch1on"><b>CH1</b> tuşu sarı yanıyor olmalı. ${acts(show('ch1'))}</li>
+        <li data-chk="ch2on"><b>CH2</b> tuşuna bas → mavi yanar. ${acts(show('ch2'), doit('ch2on'))}</li>
+        <li data-chk="trig"><b>Autoset</b> tuşuna bas. Sağ üstte yeşil <b>Trig'd</b> yazmalı. ${acts(show('autoset'), doit('autoset'))}</li>
+      </ol>
+      ${B('see', `Sarı = Vi (sinüs). Mavi = Vo: ideal olarak ${s1.sinPk.toFixed(1)} V tepeli bir sinüs olmalıydı, ama ${s1.sinPk > vs ? `<b>tepeleri düz kesilmiş</b> görünür (±${vs} V'ta kırpılma)` : 'düzgün bir sinüs görünür'}. Durum: ${live('status')}`)}` });
+
+    steps.push({ kind: 'task', code: 'G1', goes: 'Tablo 1 → Sinusoidal Output Vo,peak', t: 'Sinüs (1 kHz): Vo,peak', chk: ['mPk1', 'mMax2', 'capSin'], html: () => `
+      ${B('simple', 'Mavi dalganın en üst noktasını (tepe değerini) osiloskoba ölçtüreceğiz.')}
+      <ol class="steps">
+        <li data-chk="mPk1">Önce girişi kontrol et: <b>Measure</b> → ${BOT(1, 'Add Measurement')} → Source1 = <b>CH1</b> → ${SIDE(1, 'V/I')} → VARIABLE ile <b>Pk-Pk</b> → <b>Select</b>. CH1 Pk-Pk = ${live('vi')} (hedef <b>${tVi()} V</b>). ${acts(show('measure,bot0'), doit('mPk1'))}</li>
+        <li>CH1 hedeften farklıysa jeneratörün genliğini biraz değiştir. ${acts(doit('tuneVi', '⚡ Jeneratörü ayarla'))}</li>
+        <li data-chk="mMax2">${BOT(1, 'Add Measurement')} → ${SIDE(4, 'Source1')} ile <b>CH2</b> → ${SIDE(1, 'V/I')} → ${KNOB('VARIABLE')}, listede <b>Max</b>'ı seç → <b>Select</b> → <b>Menu Off</b>. ${acts(show('side3,side0,variable,select'), doit('mMax2'))}</li>
+        <li data-chk="capSin">CH2 Max = ${live('vmax2')} → bu senin <b>Vo,peak</b> değerin. ${acts(doit('capSin', '📥 Tabloya kaydet'))}</li>
+      </ol>
+      <div class="formula">Vi(t) = V<sub>p</sub>·cos(ωt) → dVi/dt = −ω·V<sub>p</sub>·sin(ωt)<br>Vo(t) = −R1C1·dVi/dt = ωR1C1·V<sub>p</sub>·sin(ωt) = <b>${s1.sinPk.toFixed(2)}·sin(6283.18·t) V</b> (ideal)<br>Vo,peak = ωR1C1·V<sub>p</sub> = 6.283 × ${Vp} = <b>${s1.sinPk.toFixed(2)} V</b> · |Vo/Vi| = <b>${(2 * Math.PI * 1000 * s1.RC).toFixed(3)}</b></div>
+      ${s1.sinPk > vs ? B('warn', `Teori ${s1.sinPk.toFixed(2)} V diyor ama op-amp ±15 V beslemeyle bunu veremez: ölçüm ≈ <b>${vs} V</b> çıkar ve tepeler düzleşir. Bu bir hata değil, <b>doyum</b>. Raporda "ideal ${s1.sinPk.toFixed(2)} V, simülasyon ≈ ${vs} V (besleme sınırı)" diye açıkla.`) : ''}
+      ${B('why', 'Türev alıcının kazancı frekansla artar (ωR1C1). Yüksek frekansta girişteki küçük bir dalga bile çıkışta çok büyür; bu yüzden türev alıcılar gürültüye ve doyuma karşı hassastır.')}` });
+
+    steps.push({ kind: 'task', code: 'G2', goes: 'Tablo 1 → Vo,max (+ / − eğim)', t: 'Üçgen (100 Hz): iki çıkış seviyesi', chk: ['fgTri', 'mMax2', 'mMin2', 'capTri'], html: () => `
+      ${B('simple', 'Girişi üçgen yapıyoruz. Üçgen yükselirken eğimi hep aynı, düşerken de hep aynı (ters işaretli). Türev = eğim olduğu için çıkış iki sabit seviye arasında gidip gelen bir <b>kare dalga</b> olur.')}
+      <ol class="steps">
+        <li data-chk="fgTri">Jeneratöre tıkla → Dalga: <b>Üçgen</b>, frekans <b>100 Hz</b>, genlik aynı (<b>${tVi()} Vpp</b>). Sonra <b>Autoset</b>. ${acts(show('autoset'), doit('fgTri'))}</li>
+        <li data-chk="mMax2">Measure → Source1 = <b>CH2</b> → V/I → <b>Max</b> → Select. ${acts(doit('mMax2'))}</li>
+        <li data-chk="mMin2">Aynı yoldan <b>Min</b> ekle (listede Max'ın altında). ${acts(doit('mMin2'))}</li>
+        <li>Vi <b>yükselirken</b> (pozitif eğim) Vo = CH2 Min = ${live('vmin2')} (teori <b>${(-t100.lvl).toFixed(3)} V</b>)</li>
+        <li>Vi <b>düşerken</b> (negatif eğim) Vo = CH2 Max = ${live('vmax2')} (teori <b>+${t100.lvl.toFixed(3)} V</b>)</li>
+        <li data-chk="capTri">${acts(doit('capTri', '📥 Tabloya kaydet'))}</li>
+      </ol>
+      <h3>Matematik (Prelab · Mathematical Modeling)</h3>
+      <div class="formula">T = 10 ms. Yükselen kenar (0 &lt; t &lt; 5 ms): Vi, −${Vp} V'tan +${Vp} V'a 5 ms'de çıkar<br>
+        dVi/dt = 2·V<sub>p</sub> / (T/2) = 4·V<sub>p</sub>·f = <b>+${t100.slope.toFixed(0)} V/s</b> → Vo = −R1C1·dVi/dt = <b>${(-t100.lvl).toFixed(3)} V</b><br>
+        Düşen kenar (5 &lt; t &lt; 10 ms): dVi/dt = <b>−${t100.slope.toFixed(0)} V/s</b> → Vo = <b>+${t100.lvl.toFixed(3)} V</b></div>
+      ${B('see', 'Sarı üçgen yukarı çıkarken mavi kare dalga <b>aşağıda</b> (eksi), sarı inerken mavi <b>yukarıda</b> (artı). İşaret ters, çünkü devre ters çeviren (inverting) bir yapı: Vo = <b>−</b>R1C1·dVi/dt.')}
+      ${B('tip', 'Kare dalganın köşelerinde küçük yuvarlanmalar görürsün: jeneratörün 50 Ω iç direnci C1 ile birlikte küçük bir gecikme (50 Ω × 1 µF = 50 µs) yapar. Gerçek devrede op-amp\'ın sınırlı hızı (slew rate) da eklenir.')}` });
+
+    steps.push({ kind: 'task', code: 'G3', goes: 'Tablo 1 → Triangular Gain (7 frekans)', t: `Üçgen frekans taraması (${SWEEP().length} frekans)`, chk: ['t2'], html: () => `
+      ${B('simple', 'Aynı üçgeni farklı frekanslarda veriyoruz. Frekans arttıkça eğim artar → çıkış büyür. Av = Vo,pp / Vi,pp oranını her frekansta ölçüp yazıyoruz.')}
+      <p>Her frekans için: jeneratörü o frekansa getir (genliğe <b>dokunma</b>) → <b>Autoset</b> → CH1 ve CH2 <b>Pk-Pk</b> oku → Av'yi hesapla. <b>▶ Ayarla</b> ilk işleri, <b>📥 Kaydet</b> yazmayı yapar.</p>
+      <p>Şu an: ${live('freq')} · CH1 ${live('vi')} · CH2 ${live('vo')} · Av ${live('gain')} (ideal ${live('thAv')})</p>
+      <table class="lab"><tr><th>f</th><th>İdeal Vo</th><th>İdeal Av</th><th>Ölçülen Av</th><th></th></tr>
+        ${SWEEP().map(f => { const t = dth(f), m = dat().t2[f]; return `<tr><td>${fq(f)}</td><td class="th">±${t.lvl.toFixed(2)} V${t.clip ? ' <span class="bad">⚠</span>' : ''}</td><td class="th">${t.av.toFixed(2)}</td>
+          <td>${isFinite(m) ? `<b>${(+m).toFixed(3)}</b> <span class="${Math.abs(m / t.av - 1) <= 0.05 ? 'good' : 'bad'}">(${(Math.abs(m / t.av - 1) * 100).toFixed(1)}%)</span>` : '—'}</td>
+          <td><span class="acts"><button class="do" data-sweep="${f}">▶ Ayarla</button><button data-save="${f}">📥 Kaydet</button></span></td></tr>`; }).join('')}
+      </table>
+      <div class="formula">Av = Vo,pp / Vi,pp = (2·R1C1·4V<sub>p</sub>f) / (2V<sub>p</sub>) = <b>4·f·R1C1</b> &nbsp;(genlikten bağımsız!)</div>
+      ${B('warn', `⚠ işaretli frekanslarda ideal çıkış ±${vs} V'u geçiyor: kare dalganın üstü/altı kesilir, Vo,pp ≈ ${2 * vs} V'ta kalır ve Av teoriden <b>küçük</b> çıkar. Bu beklenen bir sonuç.`)}
+      ${B('tip', 'Prelab "Keep the input amplitude constant" diyor: jeneratörün genliğini her frekansta aynı bırak. CH1\'de okunan Vi,pp biraz değişebilir (jeneratörün 50 Ω iç direnci); Av\'yi hesaplarken o frekansta <b>ölçtüğün</b> Vi,pp\'yi kullan. Yüksek frekansta üçgenin uçları biraz yuvarlanır (Vi,pp küçülür ama eğim aynı kalır), bu yüzden ölçülen Av idealden birkaç % <b>büyük</b> çıkabilir.')}` });
+
+    steps.push({ kind: 'task', code: 'G4', goes: 'Tablo 1 → First distorted frequency', t: 'Çıkış hangi frekansta bozulmaya başlıyor?', chk: ['fdist'], html: () => `
+      ${B('simple', 'G3\'te frekansları sırayla gezerken mavi kare dalgaya bak: hangi frekansta kare dalganın üstü/altı ilk kez <b>düz kesildi</b> (±' + vs + ' V\'ta takıldı)?')}
+      <ol class="steps">
+        <li>Bozulmanın işaretleri: CH2 Pk-Pk artık büyümüyor (≈ ${2 * vs} V'ta kalıyor), Av teoriden belirgin küçük, kare dalganın seviyesi ±${vs} V.</li>
+        <li data-chk="fdist">Gözlediğin ilk frekans: ${fdistSel()}</li>
+      </ol>
+      <div class="formula">Kırpılma başlar: R1C1·4V<sub>p</sub>f &gt; ${vs} V → f &gt; ${vs} / (4·${Vp}·${RCt}) = <b>${fq(+(vs / (4 * Vp * s1.RC)).toPrecision(4))}</b><br>Taramadaki ilk frekans: <b>${fdistTxt(fd)}</b> (ideal türev alıcıda hiç bozulma yok — Prelab tablosunda "Ideal: none")</div>
+      ${B('why', 'İdeal formül çıkışın sınırsız büyüyebileceğini varsayar. Gerçek op-amp\'ın çıkışı besleme gerilimini geçemez; ayrıca LM741\'in <b>slew rate</b>\'i (≈ 0.5 V/µs) kare dalganın dikey kenarlarını eğik yapar ve <b>GBW</b>\'si (≈ 1 MHz) yüksek frekansta kazancı sınırlar.')}` });
+
+    steps.push({ kind: 'bonus', code: '+', t: 'Kazancın 1 olduğu frekans', chk: ['fchar'], html: () => `
+      ${B('simple', 'Sinüste |Vo/Vi| = ωR1C1. Bu oranın tam 1 olduğu frekansta çıkış ile giriş aynı büyüklükte olur.')}
+      <ol class="steps"><li data-chk="fchar">f = 1 / (2π·R1C1) = <b>${fq(+(1 / (2 * Math.PI * s1.RC)).toPrecision(4))}</b>. ${acts(doit('unity', '⚡ O frekansta sinüs ver'))} Vo/Vi = ${live('gain')}</li>
+        <li>Bu frekansın altında türev alıcı sinyali küçültür, üstünde büyütür.</li></ol>` });
+
+    steps.push({ kind: 'end', code: '✓', t: 'Tabloları tamamla ve hata analizi', chk: ['t1', 't2'], html: () => `
+      <ol class="steps">
+        <li data-chk="t1,t2"><b>📋 Tablolar</b> sekmesinde Prelab Table 1'in tüm satırları dolu olmalı. ${acts(`<button data-tab="tables">📋 Tablolara git</button>`)}</li>
+        <li>Ekran görüntüsü: ekranın solundaki <b>Hardcopy</b> tuşu. Rapora sinüsün (G1) ve üçgenin (G2) görüntüsünü koy. ${acts(show('hardcopy'), doit('img', '📷 Görüntü al'))}</li>
+      </ol>
+      <div class="formula">Error % = (Simulation Value − Experimental Value) / Simulation Value × 100</div>
+      <h3>Hata %5'i geçerse ne yazarım?</h3>
+      <ul>
+        <li><b>Besleme doyumu</b>: LM741 ±15 V'ta yaklaşık ±13 V'tan büyük çıkış veremez.</li>
+        <li><b>Slew rate</b> (≈ 0.5 V/µs): çıkış 26 V'luk bir geçişi ≈ 50 µs'de yapabilir; kare dalganın kenarları eğikleşir.</li>
+        <li><b>GBW</b> (≈ 1 MHz) ve op-amp'ın sonlu kazancı.</li>
+        <li><b>Bileşen toleransı</b>: R ±%5, C ±%10–20 → R1C1 ve Av doğrudan değişir.</li>
+        <li><b>Jeneratörün 50 Ω iç direnci</b> ve breadboard parazitikleri (kablo, kontak kapasitesi).</li>
+        <li><b>Osiloskop</b>: DC kazanç doğruluğu ±%3, 8 bit ADC.</li>
+      </ul>` });
+    return steps;
+  }
+
+  function diffTables() {
+    const T = dat(), t1 = T.t1, pp = T.pp || {}, t100 = dth(100), s1 = dth(1000);
+    const pct = (m, th) => th ? Math.abs(m - th) / Math.abs(th) * 100 : null;
+    const row = (lbl, inp, th, m, f, clip) => {
+      const e = isFinite(m) && th ? pct(m, th) : null;
+      return `<tr><td>${lbl}</td><td class="th">${f(th)}${clip ? ' <span class="bad" title="ideal değer besleme sınırını aşıyor">⚠</span>' : ''}</td><td>${inp}</td>
+        <td class="err ${e === null ? '' : e <= 5 ? 'good' : 'bad'}">${e === null ? '' : e.toFixed(1) + '%'}</td></tr>`;
+    };
+    const f3 = (v) => (+v).toFixed(3), sg = (v) => (v >= 0 ? '+' : '') + (+v).toFixed(3);
+    const inp1 = (k) => `<input data-t1="${k}" value="${isFinite(t1[k]) ? (+t1[k]).toFixed(3) : ''}" placeholder="—">`;
+    const inp2 = (f) => `<input data-t2="${f}" value="${isFinite(T.t2[f]) ? (+T.t2[f]).toFixed(3) : ''}" placeholder="—">`;
+    const fd = fdistTh();
+    return `<h3>Tablo 1 — Prelab 02 sonuçları</h3>
+      <table class="lab"><tr><th>Parametre</th><th>Teori (ideal)</th><th>Ölçüm</th><th>Fark</th></tr>
+        ${row('Sinüs çıkışı Vo,peak (1 kHz) [V]', inp1('sinVo'), s1.sinPk, t1.sinVo, f3, s1.sinPk > vsatNow())}
+        ${SWEEP().map(f => row(`Üçgen kazanç |Vo/Vi| (${fq(f)})`, inp2(f), dth(f).av, T.t2[f], f3, dth(f).clip)).join('')}
+        ${row('Üçgen Vo, pozitif eğim (Vi yükselirken) [V]', inp1('vpos'), -t100.lvl, t1.vpos, sg)}
+        ${row('Üçgen Vo, negatif eğim (Vi düşerken) [V]', inp1('vneg'), t100.lvl, t1.vneg, sg)}
+        <tr><td>İlk bozulma / kırpılma frekansı</td><td class="th">${fdistTxt(fd)}</td>
+          <td>${fdistSel()}</td>
+          <td class="err ${!isFinite(t1.fdist) ? '' : t1.fdist === fd ? 'good' : 'bad'}">${!isFinite(t1.fdist) ? '' : t1.fdist === fd ? '✓' : '≠'}</td></tr>
+      </table>
+      <p class="muted">Teori sütunu ideal türev alıcıdır (vo = −R1C1·dvi/dt). İdeal türev alıcıda bozulma olmaz; buradaki tahmin op-amp'ın ±${vsatNow()} V doyumuna göredir. ⚠ = ideal değer besleme sınırını aşıyor (ölçüm teoriden küçük çıkar).</p>
+      <h3>Tablo 2 — Üçgen tarama ayrıntısı</h3>
+      <table class="lab"><tr><th>f</th><th>Vi,pp</th><th>Vo,pp</th><th>Av</th><th>İdeal Av</th><th></th></tr>
+        ${SWEEP().map(f => { const p = pp[f]; return `<tr><td>${fq(f)}</td><td>${p ? fmt(p[0], 'V', 4) : '—'}</td><td>${p ? fmt(p[1], 'V', 4) : '—'}</td>
+          <td>${isFinite(T.t2[f]) ? (+T.t2[f]).toFixed(3) : '—'}</td><td class="th">${dth(f).av.toFixed(2)}</td>
+          <td><span class="acts"><button class="do" data-sweep="${f}">▶</button><button data-save="${f}">📥</button></span></td></tr>`; }).join('')}
+      </table>`;
+  }
+  function diffText(n) {
+    const T = dat(), t1 = T.t1, pp = T.pp || {}, x = (v) => isFinite(v) ? (+v).toFixed(4) : '';
+    if (n === 1) {
+      const fd = fdistTh();
+      return ['Parameter\tTheoretical Value\tSimulation Value',
+        `Sinusoidal Output Vo,peak (f = 1 kHz) (V)\t${dth(1000).sinPk.toFixed(3)}\t${x(t1.sinVo)}`,
+        ...SWEEP().map(f => `Triangular Gain |Vo/Vi| (f = ${f} Hz)\t${dth(f).av.toFixed(3)}\t${x(T.t2[f])}`),
+        `Triangular Input Vo,max (Positive Slope) (V)\t${(-dth(100).lvl).toFixed(3)}\t${x(t1.vpos)}`,
+        `Triangular Input Vo,max (Negative Slope) (V)\t${dth(100).lvl.toFixed(3)}\t${x(t1.vneg)}`,
+        `First frequency with noticeable distortion / clipping / saturation\tIdeal: none (±${vsatNow()} V rail: ${fd ? fd + ' Hz' : 'none'})\t${isFinite(t1.fdist) ? (t1.fdist ? t1.fdist + ' Hz' : 'none') : ''}`].join('\n');
+    }
+    return ['Frequency (Hz)\tVi,pp (V)\tVo,pp (V)\tAv = Vo,pp/Vi,pp\tAv theory (4fRC)', ...SWEEP().map(f => `${f}\t${pp[f] ? pp[f][0] : ''}\t${pp[f] ? pp[f][1] : ''}\t${x(T.t2[f])}\t${dth(f).av.toFixed(3)}`)].join('\n');
+  }
+  function diffTheory() {
+    const d = D(), inf = I(), s1 = dth(1000), t100 = dth(100), Vp = tVi() / 2, vs = vsatNow();
+    return `<h2>🧠 Teori — ${d.title}</h2>
+      ${B('simple', inf.simple)}
+      <div class="formula">${Circuits.diagram()}</div>
+      ${viSel2()}
+      <h3>Temel bağıntı</h3>
+      <div class="formula">${FORMULA.diff}<br>R1·C1 = ${fmt(comp('R1') ? comp('R1').value : 0, 'Ω')} × ${fmt(comp('C1') ? comp('C1').value : 0, 'F')} = <b>${fmt(s1.RC, 's')}</b></div>
+      <h3>Neden böyle davranıyor?</h3><p>${inf.why}</p>
+      <h3>Sinüs (1 kHz)</h3>
+      <div class="formula">Vi(t) = ${Vp}·cos(6283.18t) → Vo(t) = ωR1C1·${Vp}·sin(6283.18t) = <b>${s1.sinPk.toFixed(2)}·sin(6283.18t) V</b><br>Vo,peak = <b>${s1.sinPk.toFixed(2)} V</b> · |Vo/Vi| = <b>${(2 * Math.PI * 1000 * s1.RC).toFixed(3)}</b> · Vo, Vi'den 90° geride</div>
+      ${s1.sinPk > vs ? B('warn', `İdeal çıkış ${s1.sinPk.toFixed(2)} V, op-amp sınırı ±${vs} V → laboratuvarda ve simülasyonda tepeleri kırpılmış bir sinüs görürsün.`) : ''}
+      <h3>Üçgen (100 Hz, T = 10 ms)</h3>
+      <div class="formula">Yükselen: dVi/dt = +4V<sub>p</sub>f = +${t100.slope.toFixed(0)} V/s → Vo = <b>${(-t100.lvl).toFixed(3)} V</b><br>Düşen: dVi/dt = −${t100.slope.toFixed(0)} V/s → Vo = <b>+${t100.lvl.toFixed(3)} V</b></div>
+      <h3>Teorik tarama tablosu</h3>
+      <table><tr><th>f</th><th>|dVi/dt|</th><th>İdeal Vo</th><th>İdeal Vo,pp</th><th>Av = 4fR1C1</th></tr>
+        ${SWEEP().map(f => { const t = dth(f); return `<tr><td>${fq(f)}</td><td>${t.slope.toFixed(0)} V/s</td><td>±${t.lvl.toFixed(2)} V</td><td>${t.vopp.toFixed(2)} V${t.clip ? ' <span class="bad">⚠ kırpılır</span>' : ''}</td><td>${t.av.toFixed(2)}</td></tr>`; }).join('')}</table>
+      <p>Kırpılma sınırı: f &gt; ${vs} / (4·V<sub>p</sub>·R1C1) = <b>${fq(+(vs / (4 * Vp * s1.RC)).toPrecision(4))}</b> → taramadaki ilk frekans <b>${fdistTxt(fdistTh())}</b>.</p>
+      ${B('tip', 'Teorik değerler tezgâhtaki R1 ve C1\'den hesaplanır. Bir değeri değiştirirsen tablo da değişir.')}`;
+  }
+
   /* ---------------- test modu ---------------- */
   const TOL = { vi: 3, vo: 5, is: 8, gain: 5, phase: 3 };
   function scoreOf() {
@@ -598,6 +852,7 @@ const Guide = (() => {
 
   /* ---------------- tablolar ---------------- */
   function tablesInner(testMode) {
+    if (isDiff()) return diffTables();
     const th = theory(F0()), T = dat(), hide = (testMode || hidden()) && !T.checked;
     if (!th) return '<p>Teori hesaplanamadı (devre eksik mi?).</p>';
     const row = (lbl, k, thv, f) => {
@@ -628,14 +883,16 @@ const Guide = (() => {
     const si = senseInfo();
     return `<h2>📋 Tablolar — ${D().title}</h2>
       <p>Ölçümleri buraya kaydet; teoriyle farkı otomatik hesaplanır. Değerleri elle de yazabilirsin. Her devrenin tabloları ayrı saklanır.</p>
+      ${isDiff() ? viSel2() : ''}
       ${D().id === 'wien' ? `<p>Vi,pp seçimi: <select id="viSel" class="ui">${[4, 8, 12].map(v => `<option ${store.vi === v ? 'selected' : ''}>${v}</option>`).join('')}</select> V</p>` : ''}
       ${hidden() && !dat().checked ? B('warn', 'Test devresi: teorik değerler 🔒 gizli. Lab sekmesinde "Kontrol et"e basınca açılır.') : ''}
       ${tablesInner(false)}
       <p>${acts(doit('cap1', '📥 Ekrandan al (Tablo 1)'), `<button data-do="copy1">📄 Tablo 1 kopyala</button>`, `<button data-do="copy2">📄 Tablo 2 kopyala</button>`, `<button data-do="csv">⬇ CSV indir</button>`, `<button data-do="clearTables">🗑 Temizle</button>`)}</p>
-      ${B('tip', `Vi, Vo, kazanç ve faz: CH1 = Vi, CH2 = Vo düzeninde al. Akım: ${si ? (si.single ? `CH2 ${si.hi}'da iken` : `CH2 ${si.lo}'da ve Math (CH1 − CH2) açıkken`) : ''} "Ekrandan al".`)}
-      ${B('why', 'Faz için yüzde yerine derece farkı yazılır: φ sıfıra yakınken küçük bir sapma bile çok büyük yüzde çıkar ve yanıltır.')}`;
+      ${isDiff() ? B('tip', '<b>Ekrandan al</b>: jeneratör 1 kHz sinüsteyse Vo,peak; 100 Hz üçgendeyse iki Vo seviyesini kaydeder. Tarama satırları için ▶ / 📥.') : B('tip', `Vi, Vo, kazanç ve faz: CH1 = Vi, CH2 = Vo düzeninde al. Akım: ${si ? (si.single ? `CH2 ${si.hi}'da iken` : `CH2 ${si.lo}'da ve Math (CH1 − CH2) açıkken`) : ''} "Ekrandan al".`)}
+      ${isDiff() ? '' : B('why', 'Faz için yüzde yerine derece farkı yazılır: φ sıfıra yakınken küçük bir sapma bile çok büyük yüzde çıkar ve yanıltır.')}`;
   }
   function tableText(n) {
+    if (isDiff()) return diffText(n);
     const th = theory(F0()), T = dat().t1, x = (v, f) => isFinite(v) ? f(v) : '';
     const p = (v) => fph(v).replace('°', '');
     if (n === 1) return ['Parameter\tTheoretical\tMeasurement',
@@ -747,6 +1004,7 @@ const Guide = (() => {
   /* ---------------- teori ---------------- */
   function theoryHtml() {
     if (!D()) return noCircuit();
+    if (isDiff()) return diffTheory();
     const d = D(), inf = I();
     if (hidden() && !dat().checked) return `<h2>🧠 Teori — ${d.title}</h2>${B('warn', 'Test devresi: teori, "Kontrol et"ten ya da "Kılavuzu aç"tan sonra görünür.')}${B('simple', inf.simple)}`;
     const fc = Circuits.charFreq();
@@ -818,6 +1076,8 @@ const Guide = (() => {
     updateHeader();
     render();
     setTimeout(() => renderTip(true), 300);
+    const nw = Circuits.DEFS.find(d => d.isNew && !store.seen[d.id]);
+    if (nw) setTimeout(() => note(`⭐ <b>Yeni deney eklendi:</b> ${nw.title}. Üstteki <b>📚 Devreler</b> → ⭐ Laboratuvar deneyleri.`, 'good', 12000), 900);
   }
   function setOpen(o) {
     store.open = o; save();
@@ -871,6 +1131,7 @@ const Guide = (() => {
   function onChange(e) {
     const t = e.target;
     if (t.id === 'viSel') { store.vi = +t.value; save(); render(); }
+    if (t.id === 'viSel2') { store.vi2 = +t.value; save(); render(); }
     if (t.dataset.t1) { const v = Units.parse(t.value); if (isFinite(v)) dat().t1[t.dataset.t1] = v; else delete dat().t1[t.dataset.t1]; save(); render(); }
     if (t.dataset.t2) { const v = parseFloat(String(t.value).replace(',', '.')); if (isFinite(v)) dat().t2[t.dataset.t2] = v; else delete dat().t2[t.dataset.t2]; save(); render(); }
     if (t.dataset.fchar) { const v = Units.parse(t.value); if (isFinite(v)) dat().fchar = v; else delete dat().fchar; save(); render(); }

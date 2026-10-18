@@ -52,6 +52,9 @@ const Circuits = (() => {
     twint: { kind: 'Twin-T çentik (notch) filtresi', target: { mingain: true }, charName: 'çentik frekansı (çıkış neredeyse sıfır)',
       simple: 'İki T devresi paralel: biri R–R (ortasında toprağa C), diğeri C–C (ortasında toprağa R). Tek bir frekansı neredeyse tamamen yok eder.',
       why: 'Çentik frekansında iki yoldan gelen sinyaller eşit büyüklükte ve ters fazda olur, birbirini götürür: Vo ≈ 0. Bu frekansın iki yanında faz aniden +90° ile −90° arasında atlar.' },
+    diff: { kind: 'Op-amp türev alıcı (differentiator)', target: { gain: 1 }, charName: 'kazancın 1 olduğu frekans f = 1/(2πR1C1)',
+      simple: 'Girişte bir kondansatör (C1), op-amp\'ın − ucu ile çıkışı arasında bir direnç (R1). + ucu toprakta. Çıkış, girişin <b>ne kadar hızlı değiştiğiyle</b> orantılıdır: v<sub>o</sub> = −R1·C1·dv<sub>i</sub>/dt.',
+      why: 'Op-amp − ucunu + ucuyla aynı gerilimde (0 V, "sanal toprak") tutar. C1\'den geçen akım i = C1·dv<sub>i</sub>/dt olur ve bu akımın tamamı R1\'den geçer: v<sub>o</sub> = −R1·i. Sinüste kazanç ωR1C1 olur (frekansla artar), Vo Vi\'den 90° geride. Üçgende eğim sabit olduğu için çıkış <b>kare dalga</b> olur. Op-amp beslemeden (±15 V) büyük gerilim veremez: hesaplanan çıkış ±13 V\'u geçerse dalga kırpılır (doyum).' },
     rc_loaded: { kind: 'Yüklü RC alçak geçiren', target: { ph: -45 }, charName: 'kesim frekansı (φ = −45°)',
       simple: 'Alçak geçiren RC filtrenin çıkışına bir yük direnci (R2) bağlanmış. Yük, kazancı ve kesim frekansını değiştirir.',
       why: 'Düşük frekansta C açık devre: devre R1–R2 bölücüsü, kazanç R2/(R1+R2). Kesim frekansı R1∥R2 ile belirlenir: f_c = 1/(2π (R1∥R2) C).' },
@@ -74,9 +77,13 @@ const Circuits = (() => {
   const twint = (Rs, R, C, R3, C3) => ({ type: 'twint', custom: 'twint', vals: { Rs, R, C, R3, C3 }, labels: [], sense: 'Rs' });
   const rc_loaded = (R1, R2, C) => ({ type: 'rc_loaded', ladder: [{ ser: E('R', R1) }, { sh: E('R', R2) }, { sh: E('C', C) }], labels: ['Vi', 'Vo'], sense: 'R1' });
 
+  const diff = (R, C) => ({ type: 'diff', custom: 'diff', vals: { R, C }, labels: [], sense: null });
+
   const SW_LOW = [20, 50, 100, 200, 500, 1000, 3000];
   const DEFS = [
     L({ id: 'wien', group: 'lab', title: 'Lab 1 — Wien RC ağı', preset: 'wien', f: 50, vpp: 4, sweep: [10, 30, 50, 100, 300, 1000, 3000], ...wien(1000, 1e-6, 1000, 1e-6) }),
+    // Prelab 02: LM741 (±15 V) ile türev alıcı. Tablo 1: 1 kHz sinüs; Tablo 2: üçgen dalga taraması (kazanç Vo,pp/Vi,pp)
+    L({ id: 'lab2', group: 'lab', isNew: true, title: 'Lab 2 — Op-amp türev alıcı', f: 1000, vpp: 8, vChips: [8, 10, 12], sweep: [100, 250, 500, 600, 750, 900, 1000], ...diff(1000, 1e-6) }),
 
     L({ id: 'l_rclp', group: 'learn', title: 'RC alçak geçiren', f: 100, vpp: 4, sweep: [20, 50, 100, 159.2, 300, 1000, 3000], ...rc_lp(1000, 1e-6) }),
     L({ id: 'l_crhp', group: 'learn', title: 'CR yüksek geçiren', f: 100, vpp: 4, sweep: [20, 50, 100, 159.2, 300, 1000, 3000], ...cr_hp(1e-6, 1000) }),
@@ -125,6 +132,7 @@ const Circuits = (() => {
     const g0 = B.add('GND', 140, GNDY);
     B.connect({ c: fg.id, p: 1 }, { c: g0.id, p: 0 });
     if (d.custom === 'twint') return buildTwinT(d, fg, g0);
+    if (d.custom === 'diff') return buildDiff(d, fg, g0);
     const add = (e, x, y, rot) => B.add(e.t, x, y, rot, e.name ? { value: e.v, name: e.name } : { value: e.v });
     const W = (a, pa, b, pb) => B.connect({ c: a.id, p: pa }, { c: b.id, p: pb });
     let x = 240, node = { c: fg.id, p: 0 }, first = true, k = 0;
@@ -180,6 +188,21 @@ const Circuits = (() => {
     Object.assign(B.model.netNames, { [rs.id + ':0']: 'Vi', [rs.id + ':1']: 'A', [r2.id + ':1']: 'Vo' });
     P[0].tip = { c: rs.id, p: 0 }; P[0].gnd = { c: g0.id, p: 0 };
     P[1].tip = { c: r2.id, p: 1 }; P[1].gnd = { c: g3.id, p: 0 };
+    B.changed();
+    return true;
+  }
+
+  function buildDiff(d, fg, g0) {
+    const v = d.vals, P = B.model.probes;
+    const W = (a, pa, b, pb) => B.connect({ c: a.id, p: pa }, { c: b.id, p: pb });
+    const c1 = B.add('C', 300, 190, 0, { value: v.C, name: 'C1' });
+    const u1 = B.add('OA', 460, 210, 0, { vsat: 13 });              // − (420,190), + (420,230), çıkış (500,210)
+    const r1 = B.add('R', 460, 110, 0, { value: v.R, name: 'R1' });
+    const g1 = B.add('GND', 420, 310), g2 = B.add('GND', 600, 310);
+    W(c1, 0, fg, 0); W(c1, 1, u1, 0); W(u1, 0, r1, 0); W(r1, 1, u1, 2); W(u1, 1, g1, 0);
+    Object.assign(B.model.netNames, { [c1.id + ':0']: 'Vi', [c1.id + ':1']: 'V−', [u1.id + ':2']: 'Vo' });
+    P[0].tip = { c: c1.id, p: 0 }; P[0].gnd = { c: g0.id, p: 0 };
+    P[1].tip = { c: u1.id, p: 2 }; P[1].gnd = { c: g2.id, p: 0 };
     B.changed();
     return true;
   }
@@ -283,6 +306,16 @@ const Circuits = (() => {
     const t = info(d).target, pts = [];
     for (let e = 0; e <= 500; e++) { const f = Math.pow(10, 0.5 + e * 4.5 / 500); const r = response(f); if (r) pts.push([f, r]); }
     if (!pts.length) return null;
+    if (t.gain !== undefined) {
+      for (let i = 1; i < pts.length; i++) {
+        if ((pts[i - 1][1].H - t.gain) * (pts[i][1].H - t.gain) > 0) continue;
+        let lo = pts[i - 1][0], hi = pts[i][0];
+        const up = pts[i][1].H > pts[i - 1][1].H;
+        for (let k = 0; k < 40; k++) { const m = Math.sqrt(lo * hi); if ((response(m).H < t.gain) === up) lo = m; else hi = m; }
+        return Math.sqrt(lo * hi);
+      }
+      return null;
+    }
     if (t.ph !== undefined) {
       for (let i = 1; i < pts.length; i++) {
         const a = pts[i - 1][1].ph - t.ph, b = pts[i][1].ph - t.ph;
@@ -317,6 +350,7 @@ const Circuits = (() => {
       case 'lag': return `Vi ─ R1(${v('R1')}) ─ Vo ─ R2(${v('R2')}) ─ C1(${v('C1')}) ─ GND`;
       case 'lead': return `Vi ─ [R1(${v('R1')}) ∥ C1(${v('C1')})] ─ Vo ─ R2(${v('R2')}) ─ GND`;
       case 'twint': return `Vi ─ Rs(${v('Rs')}) ─ A ─ R1(${v('R1')}) ─ M1 ─ R2(${v('R2')}) ─ Vo ; M1 ─ C3(${v('C3')}) ─ GND<br>A ─ C1(${v('C1')}) ─ M2 ─ C2(${v('C2')}) ─ Vo ; M2 ─ R3(${v('R3')}) ─ GND`;
+      case 'diff': return `Vi ─ C1(${v('C1')}) ─ V− (op-amp − ucu) ─ R1(${v('R1')}) ─ Vo (op-amp çıkışı)<br>op-amp + ucu ─ GND · LM741, ±15 V besleme (çıkış en fazla ±13 V)`;
       case 'rc_loaded': return `Vi ─ R1(${v('R1')}) ─ Vo ─┬─ R2(${v('R2')}) ─ GND<br>└─ C1(${v('C1')}) ─ GND`;
     }
     return '';

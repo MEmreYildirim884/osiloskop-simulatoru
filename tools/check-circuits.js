@@ -1,7 +1,8 @@
 // Tüm kütüphane devrelerini DOM'suz simüle edip ölçülen kazanç/fazı AC teoriyle karşılaştırır.
 // Kullanım: node tools/check-circuits.js            (hepsi, ~4-5 dk)
 //           node tools/check-circuits.js l_rclp     (tek devre)
-// "<<<" işaretli satırlar sapma demek (20 Hz civarında Autoset'in çalışmaması beklenen bir durumdur).
+// "<<<" işaretli satırlar sapma demek (20 Hz civarında Autoset'in çalışmaması beklenen bir durumdur;
+// lab2'de 1 kHz'de op-amp ±13 V'ta doyar, AC teori doyumu içermez — o satır da beklenen).
 const fs = require('fs'), path = require('path');
 const dir = path.join(__dirname, '..', 'src');
 const files = ['01_units_mna.js', '02_bench_model.js', '02_circuits.js', '03_state.js', '04_sim.js', '05_acq.js', '06_measure.js', '07_math.js'];

@@ -127,7 +127,7 @@ const Bench = (() => {
           elems.push(e); freqs.push(c.freq); break;
         }
         case 'DC': elems.push({ t: 'V', a: n(0), b: n(1), R: 0.01, fn: () => c.value }); break; // TAHMIN: 10 mΩ iç direnç
-        case 'OA': elems.push({ t: 'OA', n: n(0), p: n(1), o: n(2), A: 1e5, Ro: 1 }); break;
+        case 'OA': elems.push({ t: 'OA', n: n(0), p: n(1), o: n(2), A: 1e5, Ro: 1, vsat: c.vsat || 0 }); break;   // vsat: besleme sınırı (0 = sınırsız)
         case 'COMP': {
           // Prob kompanzasyon çıkışı: 0 V / 2 V kare dalga, 1 kHz (Utility > Probe Comp ile değişir)
           const f = () => opts.compFreq;

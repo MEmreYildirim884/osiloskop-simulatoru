@@ -90,14 +90,14 @@ const MNA = (() => {
    *  {t:'R', a, b, R}  {t:'C', a, b, C}  {t:'L', a, b, L}
    *  {t:'D', a, b(katot), Is, N}
    *  {t:'V', a(+), b(-), R, fn:(t)=>volt}   (Norton; R>0)
-   *  {t:'OA', p, n, o, A, Ro}
+   *  {t:'OA', p, n, o, A, Ro, vsat}   (vsat > 0: çıkış ±vsat'ta doyar — besleme sınırı)
    */
   class Circuit {
     constructor(nNodes, elems) {
       this.nn = nNodes;                 // toprak dahil düğüm sayısı
       this.n = Math.max(1, nNodes - 1); // bilinmeyen sayısı
       this.el = elems;
-      this.nonlin = elems.some(e => e.t === 'D');
+      this.nonlin = elems.some(e => e.t === 'D' || (e.t === 'OA' && e.vsat > 0));
       this.v = new Float64Array(nNodes);       // düğüm gerilimleri (v[0]=0)
       const n = this.n;
       this.Gw = new Float64Array(n * n);       // NR çalışma kopyası
@@ -110,6 +110,7 @@ const MNA = (() => {
       for (const e of elems) {
         if (e.t === 'C') { e.vp = 0; e.ip = 0; }
         if (e.t === 'L') { e.vp = 0; e.ip = 0; }
+        if (e.t === 'OA') e.sat = 0;          // doyum durumu: 0 doğrusal, ±1 artı/eksi besleme
         if (e.t === 'D') { e.vd = 0; e.vcrit = e.N * VT * Math.log(e.N * VT / (Math.SQRT2 * e.Is)); }
       }
     }
@@ -176,9 +177,11 @@ const MNA = (() => {
       if (!this.nonlin) {
         luSolve(M.LU, n, M.piv, b, this.x);
       } else {
-        // Newton-Raphson: diyotlar her iterasyonda (gd, ieq) ile doğrusallaştırılır
+        // Newton-Raphson: diyotlar her iterasyonda (gd, ieq) ile doğrusallaştırılır.
+        // Beslemeli op-amp: parçalı doğrusal; doyumdaysa çıkış = ±vsat (Norton), durum tutarlı olana dek yinelenir.
         const bl = b.slice();
         const diodes = this.diodes || (this.diodes = this.el.filter(e => e.t === 'D'));
+        const sats = this.sats || (this.sats = this.el.filter(e => e.t === 'OA' && e.vsat > 0 && e.o > 0));
         let ok = false;
         for (let it = 0; it < 80; it++) {
           this.Gw.set(M.G); b.set(bl);
@@ -190,6 +193,13 @@ const MNA = (() => {
             this._stampG(this.Gw, d.a, d.b, gd);
             this._rhs(d.a, -ieq); this._rhs(d.b, ieq);
           }
+          for (const o of sats) {
+            if (!o.sat) continue;
+            const k = o.o - 1, ga = o.A / o.Ro;
+            if (o.p > 0) this.Gw[k * n + (o.p - 1)] += ga;   // kazanç terimini iptal et
+            if (o.n > 0) this.Gw[k * n + (o.n - 1)] -= ga;
+            b[k] += o.sat * o.vsat / o.Ro;
+          }
           luFactor(this.Gw, n, this.piv);
           luSolve(this.Gw, n, this.piv, b, this.x);
           let conv = true;
@@ -200,7 +210,13 @@ const MNA = (() => {
             if (Math.abs(lim - d.vd) > 1e-9 + 1e-6 * Math.abs(d.vd) || lim !== vn) conv = false;
             d.vd = lim;
           }
-          if (conv && it > 0) { ok = true; break; }
+          for (const o of sats) {
+            const u = o.A * ((o.p > 0 ? this.x[o.p - 1] : 0) - (o.n > 0 ? this.x[o.n - 1] : 0));
+            // doyumdan çıkış önce doğrusal bölgeye (karşı doyuma doğrudan atlamak titreşim yapar)
+            const s = o.sat ? (u * o.sat > o.vsat ? o.sat : 0) : u > o.vsat ? 1 : u < -o.vsat ? -1 : 0;
+            if (s !== o.sat) { o.sat = s; conv = false; }
+          }
+          if (conv && (it > 0 || !diodes.length)) { ok = true; break; }
         }
         this.nrFail = !ok;
       }
