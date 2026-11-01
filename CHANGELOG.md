@@ -1,5 +1,15 @@
 # Değişiklik günlüğü
 
+## v1.4.0 — ⭐ Lab 4: seri RLC basamak yanıtı (Prelab 04)
+- Yeni laboratuvar deneyi: **Lab 4 — Seri RLC basamak yanıtı** (L1 = 1 mH, C1 = 4.7 nF, çıkış C1 üzerinde; 0 → V<sub>SQ</sub> kare dalga, 5 kHz). Kütüphanede ⭐ YENİ rozetiyle
+- V<sub>SQ</sub> seçimi S'ye göre (3 / 5 / 7 V); jeneratörün 50 Ω'u için seçim: "R1 = R − 50 Ω" (laboratuvar gibi) ya da ideal kaynak (LTspice gibi)
+- Adım adım kılavuz: az sönümlüde ilk tepe ve aşma (ROVShoot), %2 yerleşme süresi (imleçle), salınım periyodu; kritik ve aşırı sönümlüde yerleşme süresi; üç dalgayı REF ile aynı ekranda karşılaştırma
+- Prelab Table 1 (Theoretical / Simulation / Experimental + hata %), ek ölçümler tablosu (Td, f<sub>d</sub>, sıfır aşmalar)
+- 🧮 Teorik hesaplar: KVL → diferansiyel denklem → H(s) → ω₀, ζ, Rcrit → kökler → her durumun basamak yanıtı türetmesi, tepe/aşma/yerleşme, hazır MATLAB kodu
+- 🧠 Teori: amortisör benzetmesi, enerji alışverişi, gerçek ölçekli basamak yanıtı çizimi, s-düzlemi kök çizimi, her R için hesap makinesi
+- 🎖️ **Brifing** sekmesi (yalnız Lab 4): lab sırasında sorulacak teori tek sayfada. Hedef, denklem → H(s) → ω₀, ζ → Rcrit, basamak yanıtları, tepe/aşma/periyot, %2 yerleşme türetmeleri, Table 1 sonuç kartı, "Hoca sorarsa" soru-cevap, lab'da tuş tuş ne yapılacağı (devre kur, jeneratör, osiloskop, üç direnç için ölç ve yaz). Yazdır / PDF düğmesi
+- Düzeltme: tezgâhta bir bileşen değişince osiloskobun uzun süre tetiklenmemesi (dalganın kayması) giderildi
+
 ## v1.3.0 — Lab 2 resimli anlatım + 🧮 Teorik hesaplar
 - Lab 2 Başla sayfası: "Bu deney 1 dakikada" (araba benzetmesi) ve sinüs / üçgen için giriş-çıkış çizimleri
 - Her görevde "✍️ Tabloya yaz" kutusu: Table 1'de hangi satıra ne yazılır

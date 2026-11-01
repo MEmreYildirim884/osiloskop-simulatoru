@@ -150,6 +150,8 @@ const Acq = (() => {
 
     Sim.advance(realDt);
     const now = Sim.nowT(), old = Sim.oldestT(), dt = Sim.dt;
+    // tezgâh değişince devre yeniden kurulur ve simülasyon zamanı baştan başlar: eski tetik bekleme zamanı geçersiz
+    if (nextArm > now + S.trig.holdoff + dt) nextArm = -Infinity;
     const leftOff = S.hpos - 5 * tdiv, rightOff = S.hpos + 5 * tdiv;   // tetikten ekran kenarlarına göre
     let from = Math.max(nextArm, old - leftOff, old + 2 * dt);
     const to = Math.min(now - rightOff, now - 2 * dt);

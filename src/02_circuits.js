@@ -55,6 +55,9 @@ const Circuits = (() => {
     diff: { kind: 'Op-amp türev alıcı (differentiator)', target: { gain: 1 }, charName: 'kazancın 1 olduğu frekans f = 1/(2πR1C1)',
       simple: 'Girişte bir kondansatör (C1), op-amp\'ın − ucu ile çıkışı arasında bir direnç (R1). + ucu toprakta. Çıkış, girişin <b>ne kadar hızlı değiştiğiyle</b> orantılıdır: v<sub>o</sub> = −R1·C1·dv<sub>i</sub>/dt.',
       why: 'Op-amp − ucunu + ucuyla aynı gerilimde (0 V, "sanal toprak") tutar. C1\'den geçen akım i = C1·dv<sub>i</sub>/dt olur ve bu akımın tamamı R1\'den geçer: v<sub>o</sub> = −R1·i. Sinüste kazanç ωR1C1 olur (frekansla artar), Vo Vi\'den 90° geride. Üçgende eğim sabit olduğu için çıkış <b>kare dalga</b> olur. Op-amp beslemeden (±15 V) büyük gerilim veremez: hesaplanan çıkış ±13 V\'u geçerse dalga kırpılır (doyum).' },
+    rlc_step: { kind: 'Seri RLC basamak (kare dalga) yanıtı', target: { ph: -90 }, charName: 'doğal frekans f₀ = 1/(2π√LC)',
+      simple: 'Direnç, bobin ve kondansatör seri; çıkış kondansatörün üstünden alınır. Girişe kare dalga verilir: her yükselen kenar bir <b>basamak</b>tır (0 V’tan aniden V<sub>SQ</sub>’ya). Kondansatör gerilimi bu yeni değere nasıl gider? <b>Direnç küçükse</b> hedefi geçer ve bir süre <b>salınır</b>; <b>büyükse</b> salınmadan, yavaşça yaklaşır.',
+      why: 'Bobin ve kondansatör enerjiyi birbirine aktarır (kondansatör: elektrik alanında, bobin: manyetik alanda). Bu alışveriş kendi başına salınım yaratır (ω₀ = 1/√LC). Direnç her turda enerjinin bir kısmını ısıya çevirir: R ne kadar büyükse salınım o kadar çabuk söner. R = R<sub>crit</sub> = 2√(L/C) olduğunda salınım tam kaybolur ve çıkış hedefe en hızlı (aşmadan) ulaşır.' },
     rc_loaded: { kind: 'Yüklü RC alçak geçiren', target: { ph: -45 }, charName: 'kesim frekansı (φ = −45°)',
       simple: 'Alçak geçiren RC filtrenin çıkışına bir yük direnci (R2) bağlanmış. Yük, kazancı ve kesim frekansını değiştirir.',
       why: 'Düşük frekansta C açık devre: devre R1–R2 bölücüsü, kazanç R2/(R1+R2). Kesim frekansı R1∥R2 ile belirlenir: f_c = 1/(2π (R1∥R2) C).' },
@@ -77,13 +80,17 @@ const Circuits = (() => {
   const twint = (Rs, R, C, R3, C3) => ({ type: 'twint', custom: 'twint', vals: { Rs, R, C, R3, C3 }, labels: [], sense: 'Rs' });
   const rc_loaded = (R1, R2, C) => ({ type: 'rc_loaded', ladder: [{ ser: E('R', R1) }, { sh: E('R', R2) }, { sh: E('C', C) }], labels: ['Vi', 'Vo'], sense: 'R1' });
 
+  const rlc_step = (R, Lv, C) => ({ type: 'rlc_step', ladder: [{ ser: E('R', R) }, { ser: E('L', Lv) }, { sh: E('C', C) }], labels: ['Vi', 'A', 'Vo'], sense: 'R1' });
   const diff = (R, C) => ({ type: 'diff', custom: 'diff', vals: { R, C }, labels: [], sense: null });
 
   const SW_LOW = [20, 50, 100, 200, 500, 1000, 3000];
   const DEFS = [
     L({ id: 'wien', group: 'lab', title: 'Lab 1 — Wien RC ağı', preset: 'wien', f: 50, vpp: 4, sweep: [10, 30, 50, 100, 300, 1000, 3000], ...wien(1000, 1e-6, 1000, 1e-6) }),
     // Prelab 02: LM741 (±15 V) ile türev alıcı. Tablo 1: 1 kHz sinüs; Tablo 2: üçgen dalga taraması (kazanç Vo,pp/Vi,pp)
-    L({ id: 'lab2', group: 'lab', isNew: true, title: 'Lab 2 — Op-amp türev alıcı', f: 1000, vpp: 8, vChips: [8, 10, 12], sweep: [100, 250, 500, 600, 750, 900, 1000], ...diff(1000, 1e-6) }),
+    L({ id: 'lab2', group: 'lab', title: 'Lab 2 — Op-amp türev alıcı', f: 1000, vpp: 8, vChips: [8, 10, 12], sweep: [100, 250, 500, 600, 750, 900, 1000], ...diff(1000, 1e-6) }),
+    // Prelab 04: seri RLC, çıkış C1 üzerinde; 0→VSQ kare dalga (5 kHz, %50), R = 0.5/1/2 × Rcrit.
+    // Varsayılan R1 = Rcrit/2 − 50 Ω: jeneratörün 50 Ω iç direnciyle toplam seri direnç tam 0.5·Rcrit olur.
+    L({ id: 'lab4', group: 'lab', isNew: true, title: 'Lab 4 — Seri RLC basamak yanıtı', f: 5000, vpp: 5, offset: 2.5, wave: 'square', vChips: [3, 5, 7], sweep: [], ...rlc_step(411.3, 1e-3, 4.7e-9) }),
 
     L({ id: 'l_rclp', group: 'learn', title: 'RC alçak geçiren', f: 100, vpp: 4, sweep: [20, 50, 100, 159.2, 300, 1000, 3000], ...rc_lp(1000, 1e-6) }),
     L({ id: 'l_crhp', group: 'learn', title: 'CR yüksek geçiren', f: 100, vpp: 4, sweep: [20, 50, 100, 159.2, 300, 1000, 3000], ...cr_hp(1e-6, 1000) }),
@@ -128,7 +135,7 @@ const Circuits = (() => {
     B.add('COMP', 70, 400);
     const P = B.model.probes;
     P[0].x10 = P[1].x10 = true;
-    const fg = B.add('FG', 140, 230, 0, { wave: 'sine', freq: d.f, vpp: d.vpp, offset: 0 });
+    const fg = B.add('FG', 140, 230, 0, { wave: d.wave || 'sine', freq: d.f, vpp: d.vpp, offset: d.offset || 0 });
     const g0 = B.add('GND', 140, GNDY);
     B.connect({ c: fg.id, p: 1 }, { c: g0.id, p: 0 });
     if (d.custom === 'twint') return buildTwinT(d, fg, g0);
@@ -351,6 +358,7 @@ const Circuits = (() => {
       case 'lead': return `Vi ─ [R1(${v('R1')}) ∥ C1(${v('C1')})] ─ Vo ─ R2(${v('R2')}) ─ GND`;
       case 'twint': return `Vi ─ Rs(${v('Rs')}) ─ A ─ R1(${v('R1')}) ─ M1 ─ R2(${v('R2')}) ─ Vo ; M1 ─ C3(${v('C3')}) ─ GND<br>A ─ C1(${v('C1')}) ─ M2 ─ C2(${v('C2')}) ─ Vo ; M2 ─ R3(${v('R3')}) ─ GND`;
       case 'diff': return `Vi ─ C1(${v('C1')}) ─ V− (op-amp − ucu) ─ R1(${v('R1')}) ─ Vo (op-amp çıkışı)<br>op-amp + ucu ─ GND · LM741, ±15 V besleme (çıkış en fazla ±13 V)`;
+      case 'rlc_step': return `Vi ─ R1(${v('R1')}) ─ A ─ L1(${v('L1')}) ─ Vo ─ C1(${v('C1')}) ─ GND<br>Toplam seri direnç = R1 + jeneratörün iç direnci (${fmt((B.model.comps.find(k => k.type === 'FG') || { rout: 0 }).rout, 'Ω')})`;
       case 'rc_loaded': return `Vi ─ R1(${v('R1')}) ─ Vo ─┬─ R2(${v('R2')}) ─ GND<br>└─ C1(${v('C1')}) ─ GND`;
     }
     return '';

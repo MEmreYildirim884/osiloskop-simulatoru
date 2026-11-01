@@ -200,6 +200,21 @@ table.lab td.th{color:#9ccfff;font-family:Consolas,monospace}
 table.lab td.err{font-family:Consolas,monospace}
 .good{color:var(--ok)} .bad{color:var(--warn)}
 .calc{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center;background:#1d2127;border:1px solid #3a4048;border-radius:8px;padding:8px 10px}
+.brief .bhead{display:flex;justify-content:space-between;align-items:center;gap:8px}.brief .bhead h2{margin:0}
+.brief .lead{font-size:14px;line-height:1.55;border-left:4px solid var(--accent);padding:6px 10px;background:#2a2318;border-radius:4px}
+.brief .sec{border:1px solid #3a4048;border-radius:10px;padding:8px 12px;margin:12px 0;background:#1c2026}
+.brief .sec h3{margin:0 0 6px;display:flex;align-items:center}
+.brief .sno{display:inline-flex;justify-content:center;align-items:center;width:22px;height:22px;border-radius:11px;background:var(--accent);color:#000;font-size:12px;font-weight:800;margin-right:8px}
+.brief .cmd{border-left:4px solid #f0b22a;padding:4px 10px;margin:4px 0 8px;background:#2a2620;border-radius:4px;font-weight:600}
+.brief .drv{font-family:Cambria,Georgia,serif;font-size:14px;line-height:1.75;padding:2px 6px;color:#d9dee5}
+.brief .key{font-family:Cambria,Georgia,serif;font-size:15px;border:2px solid #f0b22a;border-radius:8px;padding:7px 10px;margin:8px 0;text-align:center;background:#15181c}
+.brief .qa dt{font-weight:700;color:#ffd36a;margin-top:8px}.brief .qa dd{margin:2px 0 4px 14px;line-height:1.5}
+.brief h4{margin:12px 0 4px;color:#8fc4ff;font-size:14px}
+.brief .bstep{margin:0;padding-left:22px}.brief .bstep li{margin:5px 0;line-height:1.5}
+.brief .bstep .see{color:#7fe095;font-size:12.5px;margin-top:1px}
+.brief .bstep li.wr{list-style:none;margin-left:-20px;background:#1c2a2b;border:1px solid #2f6b6b;border-radius:6px;padding:3px 8px;color:#bff0f0}
+.brief .cu{color:#ff9d3d}.brief .cc{color:#5fdc7a}.brief .co{color:#c79bff}
+pre.code{font:11.5px Consolas,monospace;background:#0b0d10;border:1px solid #3a4048;border-radius:6px;padding:8px 10px;white-space:pre;overflow:auto;max-height:340px;color:#d8e8d8}
 .calc input{width:90px;background:#15181c;color:#fff;border:1px solid #4a525c;border-radius:4px;padding:2px 5px}
 .calc b{font-family:Consolas,monospace;color:#9fffb5;font-weight:400}
 .formula{font-family:Cambria,Georgia,serif;font-size:14px;background:#15181c;border:1px solid #3a4048;border-radius:6px;padding:6px 10px;margin:6px 0;text-align:center}
@@ -277,7 +292,7 @@ header h1 .ver{color:var(--muted);font-weight:400;font-size:11px;margin-left:4px
 </head>
 <body>
 <header>
-  <h1><span>GW INSTEK</span> GDS-1102B · Osiloskop Simülatörü <small class="ver" title="Derleme: 2026-10-18 16:40">v1.3.0</small></h1>
+  <h1><span>GW INSTEK</span> GDS-1102B · Osiloskop Simülatörü <small class="ver" title="Derleme: 2026-11-01 12:50">v1.4.0</small></h1>
   <button class="ui primary" id="libBtn" title="Tüm devreler: Lab 1, öğretmeli devreler, test devreleri">📚 Devreler</button>
   <span class="cnav"><button class="ui sm" id="prevC" title="Önceki devre">◀</button><button class="ui" id="curName" title="Devre kütüphanesini aç">—</button><button class="ui sm" id="nextC" title="Sonraki devre">▶</button></span>
   <span class="sp"></span>
@@ -920,6 +935,9 @@ const Circuits = (() => {
     diff: { kind: 'Op-amp türev alıcı (differentiator)', target: { gain: 1 }, charName: 'kazancın 1 olduğu frekans f = 1/(2πR1C1)',
       simple: 'Girişte bir kondansatör (C1), op-amp\'ın − ucu ile çıkışı arasında bir direnç (R1). + ucu toprakta. Çıkış, girişin <b>ne kadar hızlı değiştiğiyle</b> orantılıdır: v<sub>o</sub> = −R1·C1·dv<sub>i</sub>/dt.',
       why: 'Op-amp − ucunu + ucuyla aynı gerilimde (0 V, "sanal toprak") tutar. C1\'den geçen akım i = C1·dv<sub>i</sub>/dt olur ve bu akımın tamamı R1\'den geçer: v<sub>o</sub> = −R1·i. Sinüste kazanç ωR1C1 olur (frekansla artar), Vo Vi\'den 90° geride. Üçgende eğim sabit olduğu için çıkış <b>kare dalga</b> olur. Op-amp beslemeden (±15 V) büyük gerilim veremez: hesaplanan çıkış ±13 V\'u geçerse dalga kırpılır (doyum).' },
+    rlc_step: { kind: 'Seri RLC basamak (kare dalga) yanıtı', target: { ph: -90 }, charName: 'doğal frekans f₀ = 1/(2π√LC)',
+      simple: 'Direnç, bobin ve kondansatör seri; çıkış kondansatörün üstünden alınır. Girişe kare dalga verilir: her yükselen kenar bir <b>basamak</b>tır (0 V’tan aniden V<sub>SQ</sub>’ya). Kondansatör gerilimi bu yeni değere nasıl gider? <b>Direnç küçükse</b> hedefi geçer ve bir süre <b>salınır</b>; <b>büyükse</b> salınmadan, yavaşça yaklaşır.',
+      why: 'Bobin ve kondansatör enerjiyi birbirine aktarır (kondansatör: elektrik alanında, bobin: manyetik alanda). Bu alışveriş kendi başına salınım yaratır (ω₀ = 1/√LC). Direnç her turda enerjinin bir kısmını ısıya çevirir: R ne kadar büyükse salınım o kadar çabuk söner. R = R<sub>crit</sub> = 2√(L/C) olduğunda salınım tam kaybolur ve çıkış hedefe en hızlı (aşmadan) ulaşır.' },
     rc_loaded: { kind: 'Yüklü RC alçak geçiren', target: { ph: -45 }, charName: 'kesim frekansı (φ = −45°)',
       simple: 'Alçak geçiren RC filtrenin çıkışına bir yük direnci (R2) bağlanmış. Yük, kazancı ve kesim frekansını değiştirir.',
       why: 'Düşük frekansta C açık devre: devre R1–R2 bölücüsü, kazanç R2/(R1+R2). Kesim frekansı R1∥R2 ile belirlenir: f_c = 1/(2π (R1∥R2) C).' },
@@ -942,13 +960,17 @@ const Circuits = (() => {
   const twint = (Rs, R, C, R3, C3) => ({ type: 'twint', custom: 'twint', vals: { Rs, R, C, R3, C3 }, labels: [], sense: 'Rs' });
   const rc_loaded = (R1, R2, C) => ({ type: 'rc_loaded', ladder: [{ ser: E('R', R1) }, { sh: E('R', R2) }, { sh: E('C', C) }], labels: ['Vi', 'Vo'], sense: 'R1' });
 
+  const rlc_step = (R, Lv, C) => ({ type: 'rlc_step', ladder: [{ ser: E('R', R) }, { ser: E('L', Lv) }, { sh: E('C', C) }], labels: ['Vi', 'A', 'Vo'], sense: 'R1' });
   const diff = (R, C) => ({ type: 'diff', custom: 'diff', vals: { R, C }, labels: [], sense: null });
 
   const SW_LOW = [20, 50, 100, 200, 500, 1000, 3000];
   const DEFS = [
     L({ id: 'wien', group: 'lab', title: 'Lab 1 — Wien RC ağı', preset: 'wien', f: 50, vpp: 4, sweep: [10, 30, 50, 100, 300, 1000, 3000], ...wien(1000, 1e-6, 1000, 1e-6) }),
     // Prelab 02: LM741 (±15 V) ile türev alıcı. Tablo 1: 1 kHz sinüs; Tablo 2: üçgen dalga taraması (kazanç Vo,pp/Vi,pp)
-    L({ id: 'lab2', group: 'lab', isNew: true, title: 'Lab 2 — Op-amp türev alıcı', f: 1000, vpp: 8, vChips: [8, 10, 12], sweep: [100, 250, 500, 600, 750, 900, 1000], ...diff(1000, 1e-6) }),
+    L({ id: 'lab2', group: 'lab', title: 'Lab 2 — Op-amp türev alıcı', f: 1000, vpp: 8, vChips: [8, 10, 12], sweep: [100, 250, 500, 600, 750, 900, 1000], ...diff(1000, 1e-6) }),
+    // Prelab 04: seri RLC, çıkış C1 üzerinde; 0→VSQ kare dalga (5 kHz, %50), R = 0.5/1/2 × Rcrit.
+    // Varsayılan R1 = Rcrit/2 − 50 Ω: jeneratörün 50 Ω iç direnciyle toplam seri direnç tam 0.5·Rcrit olur.
+    L({ id: 'lab4', group: 'lab', isNew: true, title: 'Lab 4 — Seri RLC basamak yanıtı', f: 5000, vpp: 5, offset: 2.5, wave: 'square', vChips: [3, 5, 7], sweep: [], ...rlc_step(411.3, 1e-3, 4.7e-9) }),
 
     L({ id: 'l_rclp', group: 'learn', title: 'RC alçak geçiren', f: 100, vpp: 4, sweep: [20, 50, 100, 159.2, 300, 1000, 3000], ...rc_lp(1000, 1e-6) }),
     L({ id: 'l_crhp', group: 'learn', title: 'CR yüksek geçiren', f: 100, vpp: 4, sweep: [20, 50, 100, 159.2, 300, 1000, 3000], ...cr_hp(1e-6, 1000) }),
@@ -993,7 +1015,7 @@ const Circuits = (() => {
     B.add('COMP', 70, 400);
     const P = B.model.probes;
     P[0].x10 = P[1].x10 = true;
-    const fg = B.add('FG', 140, 230, 0, { wave: 'sine', freq: d.f, vpp: d.vpp, offset: 0 });
+    const fg = B.add('FG', 140, 230, 0, { wave: d.wave || 'sine', freq: d.f, vpp: d.vpp, offset: d.offset || 0 });
     const g0 = B.add('GND', 140, GNDY);
     B.connect({ c: fg.id, p: 1 }, { c: g0.id, p: 0 });
     if (d.custom === 'twint') return buildTwinT(d, fg, g0);
@@ -1216,6 +1238,7 @@ const Circuits = (() => {
       case 'lead': return `Vi ─ [R1(${v('R1')}) ∥ C1(${v('C1')})] ─ Vo ─ R2(${v('R2')}) ─ GND`;
       case 'twint': return `Vi ─ Rs(${v('Rs')}) ─ A ─ R1(${v('R1')}) ─ M1 ─ R2(${v('R2')}) ─ Vo ; M1 ─ C3(${v('C3')}) ─ GND<br>A ─ C1(${v('C1')}) ─ M2 ─ C2(${v('C2')}) ─ Vo ; M2 ─ R3(${v('R3')}) ─ GND`;
       case 'diff': return `Vi ─ C1(${v('C1')}) ─ V− (op-amp − ucu) ─ R1(${v('R1')}) ─ Vo (op-amp çıkışı)<br>op-amp + ucu ─ GND · LM741, ±15 V besleme (çıkış en fazla ±13 V)`;
+      case 'rlc_step': return `Vi ─ R1(${v('R1')}) ─ A ─ L1(${v('L1')}) ─ Vo ─ C1(${v('C1')}) ─ GND<br>Toplam seri direnç = R1 + jeneratörün iç direnci (${fmt((B.model.comps.find(k => k.type === 'FG') || { rout: 0 }).rout, 'Ω')})`;
       case 'rc_loaded': return `Vi ─ R1(${v('R1')}) ─ Vo ─┬─ R2(${v('R2')}) ─ GND<br>└─ C1(${v('C1')}) ─ GND`;
     }
     return '';
@@ -1635,6 +1658,8 @@ const Acq = (() => {
 
     Sim.advance(realDt);
     const now = Sim.nowT(), old = Sim.oldestT(), dt = Sim.dt;
+    // tezgâh değişince devre yeniden kurulur ve simülasyon zamanı baştan başlar: eski tetik bekleme zamanı geçersiz
+    if (nextArm > now + S.trig.holdoff + dt) nextArm = -Infinity;
     const leftOff = S.hpos - 5 * tdiv, rightOff = S.hpos + 5 * tdiv;   // tetikten ekran kenarlarına göre
     let from = Math.max(nextArm, old - leftOff, old + 2 * dt);
     const to = Math.min(now - rightOff, now - 2 * dt);
@@ -4276,7 +4301,7 @@ const Guide = (() => {
   const fmt = Units.fmt;
   const S = () => State.S;
   const LS = 'ee212.lab1.v1';
-  const DEF_STORE = { tab: 'lab', vi: 4, vi2: 8, open: true, circuit: 'wien', steps: {}, data: {}, reveal: {}, seen: {} };
+  const DEF_STORE = { tab: 'lab', vi: 4, vi2: 8, vsq4: 5, rg4: 'comp', open: true, circuit: 'wien', steps: {}, data: {}, reveal: {}, seen: {} };
   const store = (() => {
     let o;
     try { o = Object.assign({}, DEF_STORE, JSON.parse(localStorage.getItem(LS) || '{}')); } catch (e) { o = Object.assign({}, DEF_STORE); }
@@ -4294,10 +4319,10 @@ const Guide = (() => {
   const isTest = () => D() && D().group === 'test';
   const hidden = () => isTest() && !store.reveal[store.circuit];
   const dat = () => store.data[store.circuit] || (store.data[store.circuit] = { t1: {}, t2: {} });
-  const tVi = () => D() && D().id === 'wien' ? store.vi : D() && D().type === 'diff' ? store.vi2 : (D() ? D().vpp : 4);
+  const tVi = () => D() && D().id === 'wien' ? store.vi : D() && D().type === 'diff' ? store.vi2 : D() && D().type === 'rlc_step' ? store.vsq4 : (D() ? D().vpp : 4);
   const isDiff = () => !!D() && D().type === 'diff';
   /** Tablo 1 anahtarları (devre tipine göre) */
-  const T1K = (d = D()) => d && d.type === 'diff' ? ['sinVo', 'vpos', 'vneg', 'fdist'] : ['vi', 'vo', 'is', 'gain', 'phase'];
+  const T1K = (d = D()) => d && d.type === 'diff' ? ['sinVo', 'vpos', 'vneg', 'fdist'] : d && d.type === 'rlc_step' ? ['rcrit', 'f0', 'rU', 'zU', 'vpk', 'os', 'tsU', 'tsC', 'rO', 'tsO'] : ['vi', 'vo', 'is', 'gain', 'phase'];
   const F0 = () => D() ? D().f : 50;
   const SWEEP = () => D() ? D().sweep : [];
   const stepIdx = () => store.steps[store.circuit] || 0;
@@ -4429,7 +4454,7 @@ const Guide = (() => {
   const ACT = {
     load: () => loadCircuit(store.circuit),
     probes: () => { attachProbe(0, 'Vi'); attachProbe(1, 'Vo'); note('CH1 → Vi, CH2 → Vo; iki timsah da GND\'de.'); },
-    fg: () => { setFG({ wave: 'sine', freq: F0(), vpp: tVi(), offset: 0 }); note(`Jeneratör: sinüs, ${fq(F0())}, ${tVi()} Vpp.`); },
+    fg: () => { if (isRlc()) return ACT.fgSq4(); setFG({ wave: 'sine', freq: F0(), vpp: tVi(), offset: 0 }); note(`Jeneratör: sinüs, ${fq(F0())}, ${tVi()} Vpp.`); },
     ch2on: () => { S().ch[1].on = true; State.R.persistClear = true; Menus.open('ch2'); },
     ch12: () => { const s = S(); s.ch[0].on = s.ch[1].on = true; [0, 1].forEach(c => s.ch[c].atten = Bench.model.probes[c].x10 ? 10 : 1); },
     autoset: () => { ACT.ch12(); autoset(); },
@@ -4439,6 +4464,7 @@ const Guide = (() => {
     mPh: () => { Menus.open('measure'); addMeas('Phase', 'CH1', 'CH2'); },
     mFreq: () => { Menus.open('measure'); addMeas('Frequency', 'CH1'); },
     tuneVi: () => {
+      if (isRlc()) return note(`Bu deneyde jeneratör sabit: 0 → ${tVi()} V kare dalga — değiştirilmez.`, 'warn');
       if (isDiff()) return note(`Bu deneyde jeneratörün genliği sabit kalır (${tVi()} Vpp) — değiştirilmez.`, 'warn');
       const g = fg(), m = vppNow('CH1');
       if (!g || !m) return note('Önce CH1\'de dalga görünmeli (Autoset).', 'warn');
@@ -4533,6 +4559,7 @@ const Guide = (() => {
   }
   function captureT1() {
     if (isDiff()) return captureDiff();
+    if (isRlc()) return captureRlc();
     const got = [], T = dat().t1;
     if (!freqOK(F0())) return note(`Tablo 1 için jeneratör ${fq(F0())} olmalı.`, 'warn');
     const vi = val('Pk-Pk', 'CH1'), vo = val('Pk-Pk', 'CH2'), ph = val('Phase', 'CH1', 'CH2');
@@ -4570,17 +4597,18 @@ const Guide = (() => {
   const EXTRA = [['comp', 'Prob kompanzasyon', '2 V / 1 kHz kare dalga'], ['rc', 'RC filtre (159 Hz, eski)', 'Serbest çalışma'], ['rlc', 'Seri RLC (eski)', 'Serbest çalışma'], ['rect', 'Yarım dalga doğrultucu', 'Diyot + kondansatör'], ['empty', 'Boş tezgâh', 'Kendi devreni kur']];
   function cstatus(id) {
     const d = store.data[id]; if (!d) return '';
-    const K = T1K(Circuits.get(id)), t1 = K.filter(k => isFinite(d.t1 && d.t1[k])).length, t2 = Object.keys(d.t2 || {}).length;
+    const cd = Circuits.get(id), n2 = cd ? cd.sweep.length : 7;
+    const K = T1K(cd), t1 = K.filter(k => isFinite(d.t1 && d.t1[k])).length, t2 = Object.keys(d.t2 || {}).length;
     if (d.checked && d.score) return `<span class="cst ok">Skor ${d.score}</span>`;
-    if (t1 === K.length && t2 >= 7) return '<span class="cst ok">✓ Tamam</span>';
-    if (t1 || t2) return `<span class="cst">Devam: ${t1 + t2}/${K.length + 7}</span>`;
+    if (t1 === K.length && t2 >= n2) return '<span class="cst ok">✓ Tamam</span>';
+    if (t1 || t2) return `<span class="cst">Devam: ${t1 + t2}/${K.length + n2}</span>`;
     return '';
   }
   function card(d) {
     const inf = Circuits.info(d);
     return `<div class="ccard ${d.group} ${d.isNew ? 'new' : ''} ${d.id === store.circuit ? 'cur' : ''}" data-load="${d.id}">
       <div class="ct">${d.group === 'lab' ? '⭐ ' : ''}${d.title}${d.isNew ? '<span class="newb">YENİ</span>' : ''}</div><div class="ck">${inf.kind}</div>
-      <div class="cf">${fq(d.f)}${d.type === 'diff' ? ' sinüs + üçgen' : ''} · ${d.group === 'lab' ? 'S\'ye göre' : d.vpp} Vpp ${d.group === 'test' ? '· <b>kılavuz gizli</b>' : '· kılavuzlu'}</div>${cstatus(d.id)}</div>`;
+      <div class="cf">${fq(d.f)}${d.type === 'diff' ? ' sinüs + üçgen' : d.type === 'rlc_step' ? ' kare dalga (0 → V<sub>SQ</sub>)' : ''} · ${d.group === 'lab' ? 'S\'ye göre' : d.vpp} Vpp ${d.group === 'test' ? '· <b>kılavuz gizli</b>' : '· kılavuzlu'}</div>${cstatus(d.id)}</div>`;
   }
   function openLibrary() {
     const modal = document.getElementById('modal'), box = document.getElementById('modalBox');
@@ -4653,6 +4681,7 @@ const Guide = (() => {
 
   function buildSteps() {
     if (isDiff()) return diffSteps();
+    if (isRlc()) return rlcSteps();
     const d = D(), inf = I(), isW = d.id === 'wien';
     const t0 = theory(F0()) || { H: 0, ph: 0, vo: 0, ipk: 0, iph: 0, vr: 0 };
     const si = senseInfo();
@@ -5122,6 +5151,825 @@ const Guide = (() => {
       <div class="leg"><span style="color:var(--ch1)">━ sarı = Vi (giriş, CH1)</span><span style="color:var(--ch2)">━ mavi = Vo (çıkış, CH2)</span></div><div class="leg muted">${note}</div></div>`;
   }
 
+  /* ---------------- Lab 4 (Prelab 04): seri RLC basamak yanıtı ----------------
+   * Giriş: 0 → VSQ kare dalga (5 kHz, %50 → her yarım periyot 100 µs). Her yükselen kenar bir basamaktır.
+   * R = 0.5 / 1 / 2 × Rcrit (toplam seri direnç). Tezgâhta toplam = R1 + jeneratörün iç direnci (rout).
+   * Teori: ideal kaynak + Prelab'daki R; "tezgâhta beklenen": gerçek toplam R ile.
+   * t1 (Prelab Table 1): rcrit, f0 (kHz), rU, zU, vpk (V), os (%), tsU, tsC (µs), rO, tsO (µs)
+   * x (ek ölçümler): td (µs), rC, osC, osO · ex (deney sütunu, laboratuvarda doldurulur) */
+  const isRlc = () => !!D() && D().type === 'rlc_step';
+  const CASES = {
+    U: { k: 0.5, code: 'U', name: 'Az sönümlü', en: 'Underdamped', col: '#ff9d3d', ref: 0 },
+    C: { k: 1, code: 'C', name: 'Kritik sönümlü', en: 'Critically damped', col: '#5fdc7a', ref: 1 },
+    O: { k: 2, code: 'O', name: 'Aşırı sönümlü', en: 'Overdamped', col: '#c79bff', ref: 2 },
+  };
+  const dat4 = () => { const T = dat(); if (!T.x) T.x = {}; if (!T.ex) T.ex = {}; return T; };
+  function rlcVals() {
+    const R = comp('R1'), Lc = comp('L1'), Cc = comp('C1'), g = fg();
+    const L = Lc ? Lc.value : 1e-3, C = Cc ? Cc.value : 4.7e-9, rg = g ? g.rout : 50, R1 = R ? R.value : 0;
+    return { L, C, rg, R1, Rt: R1 + rg, w0: 1 / Math.sqrt(L * C), Rc: 2 * Math.sqrt(L / C) };
+  }
+  /** Birim basamak yanıtı (y → 1) ve özellikleri; R = toplam seri direnç */
+  const stepCache = new Map();
+  function stepTh(R, L, C) {
+    const key = R.toPrecision(7) + '|' + L + '|' + C;
+    if (stepCache.has(key)) return stepCache.get(key);
+    const w0 = 1 / Math.sqrt(L * C), a = R / (2 * L), z = a / w0;
+    const o = { R, L, C, w0, f0: w0 / 2 / Math.PI, a, z };
+    if (Math.abs(z - 1) < 1e-4) { o.kind = 'C'; o.s = [-w0, -w0]; o.y = (t) => 1 - (1 + w0 * t) * Math.exp(-w0 * t); }
+    else if (z < 1) {
+      const wd = w0 * Math.sqrt(1 - z * z);
+      Object.assign(o, { kind: 'U', wd, fd: wd / 2 / Math.PI, Td: 2 * Math.PI / wd, tp: Math.PI / wd });
+      o.y = (t) => 1 - Math.exp(-a * t) * (Math.cos(wd * t) + a / wd * Math.sin(wd * t));
+    } else {
+      const d = Math.sqrt(a * a - w0 * w0), s1 = -a + d, s2 = -a - d;
+      o.kind = 'O'; o.s = [s1, s2]; o.y = (t) => 1 - (s2 * Math.exp(s1 * t) - s1 * Math.exp(s2 * t)) / (s2 - s1);
+    }
+    o.os = o.kind === 'U' ? Math.exp(-Math.PI * z / Math.sqrt(1 - z * z)) * 100 : 0;
+    o.peak = 1 + o.os / 100;
+    // %2 yerleşme: ±%2 bandının dışına son çıkış (tarama + ikiye bölme)
+    const slow = o.kind === 'O' ? -o.s[0] : o.kind === 'C' ? w0 / 1.3 : a;
+    const H = 10 / slow, N = 6000, out = (t) => Math.abs(o.y(t) - 1) > 0.02;
+    let k = 0; for (let i = 0; i <= N; i++) if (out(H * i / N)) k = i;
+    let lo = H * k / N, hi = H * (k + 1) / N;
+    for (let i = 0; i < 50; i++) { const m = (lo + hi) / 2; if (out(m)) lo = m; else hi = m; }
+    o.ts = hi;
+    o.tsApprox = 4 / (o.kind === 'O' ? -o.s[0] : a);
+    if (stepCache.size > 200) stepCache.clear();
+    stepCache.set(key, o);
+    return o;
+  }
+  const thCase = (k) => { const v = rlcVals(); return stepTh(CASES[k].k * v.Rc, v.L, v.C); };
+  const thBench = () => { const v = rlcVals(); return stepTh(v.Rt, v.L, v.C); };
+  /** Tezgâhtaki toplam R hangi duruma karşılık geliyor? (±%2) */
+  const caseNow = () => { const v = rlcVals(); return Object.keys(CASES).find(k => Math.abs(v.Rt / (CASES[k].k * v.Rc) - 1) < 0.02) || null; };
+  const zFromOs = (p) => { const L = Math.log(p / 100); return -L / Math.sqrt(Math.PI * Math.PI + L * L); };
+  const us = (s) => +(s * 1e6).toFixed(3);
+  const n4 = (v, k = 3) => (+v).toFixed(k);
+  const sqOK = () => { const g = fg(), V = tVi(); return g && g.wave === 'square' && freqOK(5000) && Math.abs(g.vpp - V) < V * 0.01 && Math.abs(g.offset - V / 2) < V * 0.01; };
+
+  /** Ekrandaki kayıttan: yükselen kenar, %2 yerleşme, ilk iki tepe (otomatik kontrol ve "⚡ imleçleri koy" için) */
+  function rlcScan() {
+    const rec = State.R.rec, A1 = Measure.A('CH1'), A2 = Measure.A('CH2');
+    if (!rec || !A1 || !A2 || !A1.rises.length || !(A1.amp > 0)) return null;
+    const st = A2.step, a = A2.arr, n = a.length;
+    const toI = (A, x) => (A.t0 + x * A.step - A2.t0) / st;
+    const r = A1.rises[0], ir = Math.max(0, Math.round(toI(A1, r)));
+    const fl = A1.falls.find(x => x > r), end = fl === undefined ? n : Math.min(n, Math.round(toI(A1, fl)));
+    const fin = A1.high, h = A1.high - A1.low;     // DC'de akım 0 → Vo, Vi'nin üst seviyesine oturur
+    let last = ir;
+    for (let i = ir; i < end; i++) if (!isNaN(a[i]) && Math.abs(a[i] - fin) > 0.02 * h) last = i;
+    const xd = (i) => (A2.t0 + i * st) / rec.tdiv - 5;
+    /** Tepe (sg = +1) ya da çukur (sg = −1): 8 bit basamak + gürültüde tek örnek seçilmesin diye uç bölgenin ağırlık merkezi */
+    const pext = (i0, i1, sg) => {
+      i0 = Math.max(0, Math.round(i0)); i1 = Math.min(end, Math.round(i1)); if (i1 - i0 < 2) return null;
+      let m = -Infinity; for (let i = i0; i < i1; i++) if (sg * a[i] > m) m = sg * a[i];
+      const thr = sg * fin + 0.5 * (m - sg * fin); let s = 0, c = 0;
+      for (let i = i0; i < i1; i++) if (sg * a[i] > thr) { const w = sg * a[i] - thr; s += i * w; c += w; }
+      return c > 0 && m > sg * fin ? { i: s / c, v: sg * m } : null;
+    };
+    const th = thBench();
+    let p1 = null, v1 = null;
+    if (th.kind === 'U') { const w = th.Td / st; p1 = pext(ir, ir + 0.75 * w, 1); if (p1) v1 = pext(p1.i + 0.25 * w, p1.i + 0.75 * w, -1); }
+    return { ir, ts: last < end - 3 ? (last + 1 - ir) * st : null, x0: xd(ir), xts: xd(last + 1), fin, h,
+      p1: p1 && { x: xd(p1.i), v: p1.v }, v1: v1 && { x: xd(v1.i), v: v1.v }, half: p1 && v1 ? (v1.i - p1.i) * st : null };
+  }
+  function setCursors(x1, x2, msg) {
+    const Cu = S().cursor;
+    Cu.mode = 'H'; Cu.h = [Math.max(-5, Math.min(5, x1)), Math.max(-5, Math.min(5, x2))]; Cu.sel = 1; Cu.hunit = 'S'; Cu.src = 'CH2';
+    Menus.open('cursor'); note(msg);
+  }
+  /** İlk tepe (≈ 1.163·VSQ) sıfır çizgisi −3.5 karedeyken ekrana sığsın: 1.2·VSQ ≤ 7.2 kare */
+  function vIdx4(atten = 10) { for (let i = 0; i < State.VDIV.length; i++) if (1.2 * tVi() / (State.VDIV[i] * atten) <= 7.2) return i; return State.VDIV.length - 1; }
+  /** Kenar görünümü: iki kanal aynı ölçek/konum (aynı eksen), 10 µs/div, kenar soldan 2. karede */
+  function edgeView() {
+    const s = S(), V = tVi();
+    s.ch[0].on = s.ch[1].on = true;
+    [0, 1].forEach(c => { s.ch[c].atten = Bench.model.probes[c].x10 ? 10 : 1; s.ch[c].coupling = 'DC'; s.ch[c].pos = -3.5; });
+    s.ch[0].vdivIdx = s.ch[1].vdivIdx = vIdx4(s.ch[0].atten);
+    s.tdivIdx = State.TDIV.findIndex(t => Math.abs(t / 10e-6 - 1) < 1e-6); s.hpos = 30e-6; s.zoom.on = false;
+    Object.assign(s.trig, { src: 'CH1', type: 'Edge', slope: 'rise', level: V / 2, mode: 'Auto', coupling: 'DC' });
+    s.acq.xy = false; s.math.on = false;
+    Sim.refilterTrig(); Acq.resetArm(); State.R.persistClear = true; State.R.run = true; State.R.single = false;
+  }
+  const viewOK = () => { const s = S(); return Math.abs(State.tdiv() - 10e-6) < 1e-9 && s.ch[0].on && s.ch[1].on && s.ch[0].vdivIdx === s.ch[1].vdivIdx && Math.abs(s.ch[0].pos - s.ch[1].pos) < 0.05 && s.hpos > 5e-6; };
+
+  /* -------- kayıt (📥) -------- */
+  function capPk() {
+    if (caseNow() !== 'U') return note('Önce R1\'i az sönümlü değere ayarla (toplam R = 0.5 × Rcrit).', 'warn');
+    if (!sqOK()) return note('Jeneratör 0 → ' + tVi() + ' V kare dalga (5 kHz) olmalı.', 'warn');
+    const mx = val('Max', 'CH2'), os = val('ROVShoot', 'CH2');
+    if (!mx || !os) return note('CH2 Max ve ROVShoot ölçülemedi — ekran ayarlı mı (H3), ölçümler ekli mi?', 'warn');
+    const T = dat4(), t1 = T.t1, v = rlcVals();
+    t1.vpk = +mx.v.toFixed(4); t1.os = +os.v.toFixed(2); t1.rU = +v.Rt.toFixed(1);
+    if (os.v > 0) { t1.zU = +zFromOs(os.v).toFixed(4); t1.rcrit = +(v.Rt / t1.zU).toFixed(1); }
+    if (isFinite(T.x.td) && isFinite(t1.zU)) t1.f0 = +(1000 / T.x.td / Math.sqrt(1 - t1.zU * t1.zU)).toFixed(3);
+    save(); render();
+    note(`Kaydedildi: Vo,peak = ${t1.vpk} V, aşma = ${t1.os} % → ζ = ${t1.zU}, Rcrit = ${t1.rcrit} Ω, Runder = ${t1.rU} Ω.`);
+  }
+  function capTs(k) {
+    if (caseNow() !== k) return note(`R1 şu an ${CASES[k].name.toLowerCase()} durum için ayarlı değil — önce "R1'i ayarla".`, 'warn');
+    const d = cursorDt(); if (d === null || !(d > 0)) return note('Önce yatay imleçleri (H Cursor) koy: ① kenarda, ② yerleşme noktasında.', 'warn');
+    const T = dat4(), v = rlcVals();
+    T.t1['ts' + k] = us(d);
+    if (k === 'O') T.t1.rO = +v.Rt.toFixed(1);
+    if (k === 'C') T.x.rC = +v.Rt.toFixed(1);
+    const os = val('ROVShoot', 'CH2'); if (os && k !== 'U') T.x['os' + k] = +os.v.toFixed(2);
+    save(); render();
+    note(`${CASES[k].name}: yerleşme süresi t<sub>s</sub> = ${T.t1['ts' + k]} µs kaydedildi.`);
+  }
+  function capTd() {
+    if (caseNow() !== 'U') return note('Td az sönümlü durumda ölçülür.', 'warn');
+    const d = cursorDt(); if (d === null || !(d > 0)) return note('İmleçleri koy: ① ilk tepe, ② hemen sonraki çukur.', 'warn');
+    const T = dat4(); T.x.td = us(2 * d);
+    if (isFinite(T.t1.zU)) T.t1.f0 = +(1000 / T.x.td / Math.sqrt(1 - T.t1.zU * T.t1.zU)).toFixed(3);
+    save(); render();
+    note(`Td = 2 × ${us(d)} = ${T.x.td} µs → f_d = ${(1000 / T.x.td).toFixed(2)} kHz${isFinite(T.t1.f0) ? `, f₀ = ${T.t1.f0} kHz` : ' (f₀ için önce G1\'i kaydet)'}.`);
+  }
+  function captureRlc() {
+    const k = caseNow();
+    if (k === 'U' && S().cursor.mode !== 'H') return capPk();
+    if (k && S().cursor.mode === 'H') return capTs(k);
+    note('Ekrandan al: R1 bir duruma (0.5 / 1 / 2 × Rcrit) ayarlı olmalı. Az sönümlüde tepe ve aşma; imleçler açıksa yerleşme süresi alınır.', 'warn');
+  }
+  Object.assign(ACT, {
+    fgSq4: () => { setFG({ wave: 'square', freq: 5000, vpp: tVi(), offset: tVi() / 2 }); note(`Jeneratör: kare dalga, 5 kHz, ${tVi()} Vpp, ofset ${tVi() / 2} V → çıkış 0 V ile ${tVi()} V arasında.`); },
+    edgeView: () => { edgeView(); note(`Ekran ayarlandı: iki kanal ${fmt(State.vdiv(0), 'V')}/div ve aynı sıfır çizgisi, TIME/DIV 10 µs, yükselen kenar soldan 2. karede.`); },
+    setU: () => setR4('U'), setC: () => setR4('C'), setO: () => setR4('O'),
+    mOS2: () => { Menus.open('measure'); addMeas('ROVShoot', 'CH2'); },
+    capPk: () => capPk(), capTsU: () => capTs('U'), capTsC: () => capTs('C'), capTsO: () => capTs('O'), capTd: () => capTd(),
+    tsCurs: () => { const r = rlcScan(); if (!r) return note('Önce ekranda yükselen kenar görünmeli (H3).', 'warn'); if (r.ts === null) return note('Dalga ekranda yerleşmiyor — TIME/DIV\'i büyüt.', 'warn'); setCursors(r.x0, r.xts, `① kenarda, ② dalganın ±%2 bandına son girdiği yerde. Δ = ${fmt(r.ts, 's', 4)}.`); },
+    tdCurs: () => { const r = rlcScan(); if (!r || !r.p1 || !r.v1) return note('Tepe ve çukur bulunamadı — az sönümlü durumda ve H3 ekranında ol.', 'warn'); setCursors(r.p1.x, r.v1.x, `① ilk tepede, ② ilk çukurda. Δ = Td/2 = ${fmt(r.half, 's', 4)} → Td = ${fmt(2 * r.half, 's', 4)}.`); },
+    ref4U: () => saveRef4('U'), ref4C: () => saveRef4('C'), ref4O: () => saveRef4('O'),
+    refsOn: () => { let n = 0; S().ref.slice(0, 3).forEach(r => { if (r.data) { r.on = true; n++; } }); State.R.persistClear = true; note(n ? `${n} referans dalga ekranda (beyaz).` : 'Kayıtlı referans yok — önce G1, G3, G4\'te REF\'e kaydet.', n ? 'good' : 'warn'); },
+    copyM: () => { const t = matlabCode(); const done = () => note('MATLAB kodu panoya kopyalandı.'); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, () => fallbackCopy(t, done)); else fallbackCopy(t, done); },
+  });
+  function setR4(k) {
+    const R = comp('R1'), g = fg(); if (!R || !g) return note('Tezgâhta R1 ya da jeneratör yok — devreyi yeniden kur.', 'warn');
+    BenchUI.checkpoint();
+    if (store.rg4 === 'ideal') g.rout = 0; else if (!(g.rout > 0)) g.rout = 50;
+    const tgt = CASES[k].k * rlcVals().Rc;
+    R.value = +(tgt - g.rout).toFixed(1);
+    Bench.changed(); BenchUI.render();
+    note(`R1 = ${fmt(R.value, 'Ω', 4)} yapıldı → toplam R = R1 + ${g.rout} Ω = <b>${fmt(R.value + g.rout, 'Ω', 4)}</b> = ${CASES[k].k} × Rcrit (${CASES[k].name.toLowerCase()}).`);
+  }
+  function saveRef4(k) {
+    if (caseNow() !== k) return note(`Ekrandaki dalga ${CASES[k].name.toLowerCase()} değil — önce R1'i ayarla.`, 'warn');
+    if (Menus.saveRef(CASES[k].ref, 'CH2')) { Menus.open('ref'); note(`CH2 (${CASES[k].name.toLowerCase()}) → R${CASES[k].ref + 1}'e kaydedildi. Ekranda beyaz çizgi olarak kalır.`); }
+  }
+  Object.assign(CHK, {
+    sqW: () => fg() && fg().wave === 'square', sqF: () => freqOK(5000),
+    sqA: () => fg() && Math.abs(fg().vpp - tVi()) < tVi() * 0.01, sqO: () => fg() && Math.abs(fg().offset - tVi() / 2) < tVi() * 0.01,
+    view: viewOK, mOS2: () => hasMeas('ROVShoot', 'CH2'),
+    rU: () => caseNow() === 'U', rC: () => caseNow() === 'C', rO: () => caseNow() === 'O',
+    capPk: () => isFinite(dat4().t1.vpk) && isFinite(dat4().t1.os),
+    tsU: () => isFinite(dat4().t1.tsU), tsC: () => isFinite(dat4().t1.tsC), tsO: () => isFinite(dat4().t1.tsO), td: () => isFinite(dat4().x.td),
+    cursH2: () => S().cursor.mode === 'H' && S().cursor.src === 'CH2',
+    refU: () => !!S().ref[0].data, refC: () => !!S().ref[1].data, refO: () => !!S().ref[2].data,
+    refsOn: () => S().ref.slice(0, 3).every(r => r.data && r.on),
+  });
+  Object.assign(LIVE, {
+    rtot: () => { const v = rlcVals(); return { t: `${fmt(v.R1, 'Ω', 4)} + ${fmt(v.rg, 'Ω')} = ${fmt(v.Rt, 'Ω', 4)}` }; },
+    zeta: () => { const v = rlcVals(); return { t: (v.Rt / v.Rc).toFixed(3) }; },
+    caseNow: () => { const k = caseNow(); return k ? { t: CASES[k].name } : { t: 'hiçbiri (R hedefte değil)', bad: true }; },
+    os2: () => { const r = val('ROVShoot', 'CH2'); return r ? { t: r.v.toFixed(2) + ' %' } : { t: '?', bad: true }; },
+    hi1: () => { const r = val('High', 'CH1'); return r ? { t: fmt(r.v, 'V', 4) } : { t: '?', bad: true }; },
+    tsAuto: () => { const r = isRlc() && rlcScan(); return r && r.ts !== null ? { t: fmt(r.ts, 's', 4) } : { t: '?', bad: true }; },
+    tdAuto: () => { const r = isRlc() && rlcScan(); return r && r.half ? { t: 'Td ≈ ' + fmt(2 * r.half, 's', 4) } : { t: '?', bad: true }; },
+    thBts: () => ({ t: fmt(thBench().ts, 's', 4) }), thBos: () => ({ t: thBench().os.toFixed(2) + ' %' }),
+  });
+  const viSel4 = () => `<p><b>V<sub>SQ</sub> seçimi (S'ye göre):</b> 0 ≤ S ≤ 6 → <b>3 V</b> · 6 &lt; S ≤ 12 → <b>5 V</b> · 12 &lt; S ≤ 18 → <b>7 V</b>. Seçimin:
+    <select id="viSel4" class="ui">${[3, 5, 7].map(v => `<option value="${v}" ${store.vsq4 === v ? 'selected' : ''}>V<sub>SQ</sub> = ${v} V (0 → ${v} V)</option>`).join('')}</select></p>`;
+  const rgSel4 = () => `<p><b>Jeneratörün 50 Ω'u:</b> <select id="rgSel4" class="ui">
+    <option value="comp" ${store.rg4 !== 'ideal' ? 'selected' : ''}>Laboratuvar gibi: R1 = R − 50 Ω (önerilen)</option>
+    <option value="ideal" ${store.rg4 === 'ideal' ? 'selected' : ''}>LTspice gibi: ideal kaynak (0 Ω), R1 = R</option></select></p>`;
+
+  /* -------- çizimler -------- */
+  /** Üç durumun basamak yanıtı (gerçek ölçekli, tezgâhtaki L ve C ile). only: tek durumu vurgula */
+  function stepPic(only) {
+    const v = rlcVals(), W = 400, H = 190, x0 = 34, y0 = 160, w = W - x0 - 10, hgt = 120, tmax = 50e-6;
+    const X = (t) => (x0 + t / tmax * w).toFixed(1), Y = (y) => (y0 - y * hgt).toFixed(1);
+    const txt = (x, y, s, col, anc = 'start', sz = 11) => `<text x="${x}" y="${y}" fill="${col}" font-size="${sz}" text-anchor="${anc}">${s}</text>`;
+    let b = '';
+    for (let t = 0; t <= 50; t += 10) b += `<line x1="${X(t * 1e-6)}" x2="${X(t * 1e-6)}" y1="${Y(0)}" y2="${Y(1.25)}" stroke="#2a2f36"/>` + txt(X(t * 1e-6), y0 + 13, t + ' µs', '#888', 'middle', 10);
+    b += `<rect x="${x0}" y="${Y(1.02)}" width="${w}" height="${(0.04 * hgt).toFixed(1)}" fill="#ffffff" opacity=".07"/>`
+      + [0.98, 1.02].map(q => `<line x1="${x0}" x2="${W - 10}" y1="${Y(q)}" y2="${Y(q)}" stroke="#888" stroke-dasharray="3 3"/>`).join('')
+      + txt(W - 12, +Y(1.02) - 3, '±%2 bandı', '#aaa', 'end', 10);
+    b += `<line x1="${x0}" x2="${W - 10}" y1="${Y(0)}" y2="${Y(0)}" stroke="#555"/>` + txt(4, +Y(0) + 4, '0', '#888') + txt(4, +Y(1) + 4, 'V<tspan font-size="8">SQ</tspan>', '#888');
+    b += `<polyline fill="none" stroke="#ffe14a" stroke-width="2" points="${x0},${Y(0)} ${x0},${Y(1)} ${W - 10},${Y(1)}"/>`;
+    for (const k of Object.keys(CASES)) {
+      const th = thCase(k), dim = only && only !== k;
+      const pts = Array.from({ length: 301 }, (_, i) => { const t = i / 300 * tmax; return `${X(t)},${Y(th.y(t))}`; }).join(' ');
+      b += `<polyline fill="none" stroke="${CASES[k].col}" stroke-width="${dim ? 1.2 : 2.4}" opacity="${dim ? 0.3 : 1}" points="${pts}"/>`;
+      // t_s etiketleri altta, üst üste binmesin diye kademeli (C ve U birbirine yakın)
+      const ly = { U: 0.2, C: 0.08, O: 0.08 }[k];
+      if (!dim && th.ts < tmax) b += `<line x1="${X(th.ts)}" x2="${X(th.ts)}" y1="${Y(1.05)}" y2="${Y(0)}" stroke="${CASES[k].col}" stroke-dasharray="2 3"/>`
+        + `<rect x="${+X(th.ts) + 2}" y="${+Y(ly) - 10}" width="54" height="13" fill="#111417" opacity=".85"/>` + txt(+X(th.ts) + 4, Y(ly), 't<tspan font-size="8" dy="2">s</tspan><tspan dy="-2">=' + n4(th.ts * 1e6, 1) + 'µs</tspan>', CASES[k].col, 'start', 10);
+      if (!dim && k === 'U') b += `<circle cx="${X(th.tp)}" cy="${Y(th.peak)}" r="3" fill="${CASES.U.col}"/>` + txt(+X(th.tp) + 6, +Y(th.peak) + 3, `ilk tepe (+${n4(th.os, 1)} %)`, CASES.U.col, 'start', 10);
+    }
+    return `<div class="wpic"><svg viewBox="0 0 ${W} ${H}">${b}</svg>
+      <div class="leg"><span style="color:var(--ch1)">━ giriş Vi (basamak)</span>${Object.keys(CASES).map(k => `<span style="color:${CASES[k].col}">━ ${CASES[k].name} (R = ${CASES[k].k} × Rcrit)</span>`).join('')}</div>
+      <div class="leg muted">Gerçek ölçekli: L = ${fmt(v.L, 'H')}, C = ${fmt(v.C, 'F')}. Dikey çizgiler = %2 yerleşme süreleri.</div></div>`;
+  }
+  /** s-düzlemi: üç durumun kökleri */
+  function splanePic() {
+    const v = rlcVals(), W = 400, H = 190, cx = 330, cy = 95, sc = 60 / v.w0;   // ω0 = 60 px
+    const P = (re, im) => [(cx + re * sc).toFixed(1), (cy - im * sc).toFixed(1)];
+    const txt = (x, y, s, col, anc = 'start', sz = 10) => `<text x="${x}" y="${y}" fill="${col}" font-size="${sz}" text-anchor="${anc}">${s}</text>`;
+    let b = `<line x1="8" x2="${W - 8}" y1="${cy}" y2="${cy}" stroke="#666"/><line x1="${cx}" x2="${cx}" y1="8" y2="${H - 8}" stroke="#666"/>`
+      + txt(W - 10, cy - 4, 'σ (gerçek)', '#999', 'end') + txt(cx + 4, 16, 'jω (sanal)', '#999')
+      + `<circle cx="${cx}" cy="${cy}" r="60" fill="none" stroke="#555" stroke-dasharray="3 3"/>` + txt(cx - 44, cy - 50, '|s| = ω₀', '#888', 'end');
+    const dot = (re, im, col, lab, dy = -6) => { const [x, y] = P(re, im); return `<text x="${x}" y="${+y + 4}" fill="${col}" font-size="14" font-weight="700" text-anchor="middle">×</text>` + (lab ? txt(x, +y + dy, lab, col, 'middle') : ''); };
+    const U = thCase('U'), C = thCase('C'), O = thCase('O');
+    b += dot(-U.a, U.wd, CASES.U.col, 'az sönümlü') + dot(-U.a, -U.wd, CASES.U.col, '', 0);
+    b += dot(-C.w0, 0, CASES.C.col, 'kritik (çift kök)', 22);
+    b += dot(O.s[0], 0, CASES.O.col, 'aşırı', -8) + dot(O.s[1], 0, CASES.O.col, 'aşırı', -8);
+    return `<div class="wpic"><svg viewBox="0 0 ${W} ${H}">${b}</svg>
+      <div class="leg muted">Kökler sol yarı düzlemde → hepsi kararlı (sönen). Sanal kısmı olan kök (turuncu) = salınım. R büyüdükçe kökler daire üstünden gerçek eksene iner, sonra ayrılır: biri yavaşa (sağa, 0'a yakın), biri hızlıya.</div></div>`;
+  }
+
+  /* -------- adımlar -------- */
+  function rlcSteps() {
+    const d = D(), v = rlcVals(), V = tVi(), U = thCase('U'), C = thCase('C'), O = thCase('O');
+    const steps = [], MORE = (t, h) => `<details class="recipe"><summary>${t}</summary><div class="in">${h}</div></details>`;
+    const at = (code) => steps.findIndex(x => x.code === code);
+    const toCalc = `<button data-tab="calc">🧮 Hesabın tamamı</button>`, toTh = `<button data-tab="theory">🧠 Teori</button>`;
+    const R1for = (k) => fmt(CASES[k].k * v.Rc - (store.rg4 === 'ideal' ? 0 : 50), 'Ω', 4);
+    const band = `${n4(0.98 * V, 2)} V … ${n4(1.02 * V, 2)} V`;
+    const rgTxt = store.rg4 === 'ideal' ? 'Jeneratör ideal (0 Ω) seçildi: R1 doğrudan Prelab\'daki R olur.' : `Jeneratörün içinde <b>50 Ω</b> var ve devreye seri bağlıdır. Bu yüzden R1'e <b>R − 50 Ω</b> yazıyoruz: toplam yine tam R olur.`;
+    const refStep = (k) => `<li data-chk="ref${k}">Bu dalgayı karşılaştırma için sakla (G5'te kullanacağız): <b>R</b> (REF) tuşuna bas → ${BOT(CASES[k].ref + 1, 'R' + (CASES[k].ref + 1))} → ${SIDE(2, 'Source')} (ekranda <b>CH2</b> yazana kadar) → ${SIDE(3, 'Save')}. ${acts(show('ref,bot' + CASES[k].ref + ',side1,side2'), doit('ref4' + k))}</li>`;
+    const setRli = (k) => `<li data-chk="r${k}">Tezgâhta <b>R1'e tıkla</b>, sağdaki kutuya <b>${R1for(k)}</b> yaz, Enter. ${rgTxt} ${acts(doit('set' + k, '⚡ R1\'i ayarla'))}<br>Şu an toplam R = ${live('rtot')} · ζ = ${live('zeta')} · durum: ${live('caseNow')}</li>`;
+    const tsHow = (k) => `
+        <li data-chk="cursH2"><b>Cursor</b> tuşuna bas → ${BOT(1, 'H Cursor')} (iki dikey çizgi çıkar) → ${BOT(3, 'Source')} → sağdan <b>CH2</b>'yi seç. Artık sol üstteki kutu, imlecin olduğu yerde <b>Vo</b>'nun değerini yazar. ${acts(show('cursor,bot0,bot2'))}</li>
+        <li>${KNOB('VARIABLE')}: <b>① imleci sarının yükselen kenarına</b> getir (t = 0 anı). Sonra <b>Select</b>'e bas (② seçilir).</li>
+        <li>② imleci sağa götür. Kutudaki <b>②</b> satırında Vo değeri <b>${band}</b> aralığına girdiği ve <b>bir daha hiç çıkmadığı</b> ilk yerde dur.${k === 'U' ? ' (Dikkat: az sönümlüde dalga bandın içine girip tekrar çıkar — <b>son</b> girişi bul.)' : ''} ${acts(doit('tsCurs', '⚡ İmleçleri benim için koy'))}</li>
+        <li data-chk="ts${k}">Kutudaki <b>Δ</b> = yerleşme süresi t<sub>s</sub> (şu an Δ = ${live('dt')}). ${acts(doit('capTs' + k, '📥 Tabloya kaydet'))} <span class="muted">Otomatik kontrol: ${live('tsAuto')}</span></li>`;
+
+    steps.push({ kind: 'start', code: 'Başla', t: 'Bu deneyde ne yapacağız?', chk: 'loaded', html: () => `
+      <div class="ccard lab new cur" style="cursor:default"><div class="ct">⭐ ${d.title}<span class="newb">YENİ</span></div><div class="ck">${I().kind} · Prelab 04</div><div class="cf">L1 = 1 mH · C1 = 4.7 nF · R1 = 0.5 / 1 / 2 × Rcrit · kare dalga 0 → ${V} V, 5 kHz</div></div>
+      <h3>Bu deney 1 dakikada</h3>
+      ${B('simple', `Girişe bir <b>basamak</b> veriyoruz: gerilim bir anda 0 V'tan ${V} V'a zıplıyor. Kondansatörün gerilimi (Vo) bu yeni değere <b>nasıl</b> gidiyor, ona bakıyoruz. Cevap dirence bağlı.`)}
+      <p><b>Araba amortisörü benzetmesi:</b> Arabayla bir kaldırımdan iniyorsun.</p>
+      <table>
+        <tr><th>Devrede</th><th>Arabada</th><th>Ne yapar?</th></tr>
+        <tr><td><b>L</b> (bobin)</td><td>arabanın <b>kütlesi</b></td><td>Akımın aniden değişmesine direnir (atalet). Hızla giden araba hemen duramaz.</td></tr>
+        <tr><td><b>C</b> (kondansatör)</td><td><b>yay</b></td><td>Enerjiyi depolar ve geri verir.</td></tr>
+        <tr><td><b>R</b> (direnç)</td><td><b>amortisör</b></td><td>Enerjiyi ısıya çevirip yok eder: salınımı söndürür.</td></tr>
+      </table>
+      ${stepPic()}
+      <ul>
+        <li><b style="color:${CASES.U.col}">Az sönümlü</b> (R küçük, zayıf amortisör): hedefi <b>geçer</b>, bir süre aşağı yukarı <b>zıplar</b> (salınım), sonra durulur.</li>
+        <li><b style="color:${CASES.C.col}">Kritik sönümlü</b> (R = Rcrit, tam ayarlı amortisör): <b>hiç geçmeden</b>, hedefe <b>en hızlı</b> ulaşır.</li>
+        <li><b style="color:${CASES.O.col}">Aşırı sönümlü</b> (R büyük, çok sert amortisör): geçmez ama hedefe <b>yavaş yavaş</b> sürünerek gider.</li>
+      </ul>
+      <p>Neden <b>kare dalga</b>? Kare dalga her 100 µs'de bir kendiliğinden 0 → ${V} V (ve geri) zıplar: yani basamağı saniyede binlerce kez tekrarlar. Osiloskop bu tekrarlanan olayı sabit bir görüntü olarak gösterebilir.</p>
+      <h3>Senden istenen: önce V<sub>SQ</sub>'yu seç</h3>
+      ${viSel4()}
+      <p class="muted">S = öğrenci numaralarının son hanelerinin toplamı (tek başına çalışıyorsan kendi numaranın son hanesi). Seçtiğin V<sub>SQ</sub> deney boyunca <b>hiç değişmez</b>.</p>
+      ${rgSel4()}
+      ${MORE('Bu 50 Ω seçimi ne demek? (önemli)', `<p>Gerçek jeneratörün içinde 50 Ω'luk bir direnç vardır ve devreye <b>seri</b> girer. RLC devresinde seri direnç doğrudan sönümü belirlediği için bu 50 Ω hesabı değiştirir: örneğin az sönümlüde R1 = ${fmt(U.R, 'Ω', 4)} takarsan toplam ${fmt(U.R + 50, 'Ω', 4)} olur, aşma %${n4(U.os, 1)} yerine %${n4(stepTh(U.R + 50, v.L, v.C).os, 1)} çıkar.</p>
+        <p><b>Önerilen</b>: R1 = R − 50 Ω yaz, toplam tam R olsun (laboratuvarda da böyle yap). <b>LTspice gibi</b>: jeneratörün iç direncini 0 yapar, R1 = R olur — sonuçlar aynı çıkar, sadece tezgâhta yazan R1 değişir.</p>`)}
+      <h3>Sonra 5 görev</h3>
+      <p>Satıra tıklarsan o göreve gidersin. Biten görev yeşil ✓ olur.</p>
+      <table>
+        <tr><th>Görev</th><th>Ne yapacaksın?</th><th>Table 1'e</th></tr>
+        <tr data-goto="${at('G1')}" style="cursor:pointer"><td><b>G1</b></td><td style="color:${CASES.U.col}">Az sönümlü: ilk tepe ve aşma (%)</td><td>Runder, ζ, Vo,peak, overshoot, Rcrit</td></tr>
+        <tr data-goto="${at('G2')}" style="cursor:pointer"><td><b>G2</b></td><td style="color:${CASES.U.col}">Az sönümlü: yerleşme süresi + salınım periyodu</td><td>settling time, f0</td></tr>
+        <tr data-goto="${at('G3')}" style="cursor:pointer"><td><b>G3</b></td><td style="color:${CASES.C.col}">Kritik sönümlü: yerleşme süresi</td><td>critical settling time</td></tr>
+        <tr data-goto="${at('G4')}" style="cursor:pointer"><td><b>G4</b></td><td style="color:${CASES.O.col}">Aşırı sönümlü: yerleşme süresi</td><td>Rover, settling time</td></tr>
+        <tr data-goto="${at('G5')}" style="cursor:pointer"><td><b>G5</b></td><td>Üç dalgayı aynı ekranda karşılaştır</td><td>rapordaki şekil</td></tr>
+      </table>
+      <p>Görevlerden önce <b>3 kısa hazırlık</b> var: H1 problar, H2 jeneratör, H3 ekran.</p>
+      ${B('tip', `Table 1'in <b>Theoretical</b> sütunu <b>🧮 Teorik hesaplar</b> sekmesinde adım adım (türetme dahil). <b>Simulation</b> = burada ölçtüğün. <b>Experimental</b> = laboratuvarda. ${acts(toCalc, toTh)}`)}
+      <ol class="steps"><li data-chk="loaded">Devre tezgâhta kurulu olmalı. ${acts(doit('load', '⚡ Devreyi (yeniden) kur'))}</li></ol>` });
+
+    steps.push({ kind: 'prep', code: 'H1', t: 'Devreyi tanı, probları bağla', chk: ['p1Vi', 'p2Vo', 'gnd'], html: () => `
+      ${B('simple', 'Sarı prob (CH1) girişi, mavi prob (CH2) çıkışı yani <b>kondansatörün gerilimini</b> görecek.')}
+      <div class="formula">${Circuits.diagram()}</div>
+      <ol class="steps">
+        <li data-chk="p1Vi"><b>Sarı CH1 probunun ucunu Vi'ye</b> tak (jeneratörün çıkışı, R1'in sol ucu).</li>
+        <li data-chk="p2Vo"><b>Mavi CH2 probunun ucunu Vo'ya</b> tak (L1 ile C1'in birleştiği nokta = C1'in üst ucu).</li>
+        <li data-chk="gnd">İki probun da <b>siyah timsahını GND'ye</b> tak (C1'in alt ucu toprakta, Şekil 1'deki "−" uç). ${acts(doit('probes'))}</li>
+      </ol>
+      ${B('why', 'Vo, C1\'in iki ucu arasındaki gerilimdir. C1\'in alt ucu zaten toprakta olduğu için CH2 ucunu üst uca takmak yeter. Osiloskop her zaman "uç − toprak" ölçer.')}
+      ${MORE('Seri devrede akım her yerde aynı — ne demek?', `<p>Tek bir halka var: jeneratör → R1 → L1 → C1 → geri. Bu yüzden R1'den, L1'den ve C1'den <b>aynı akım</b> i(t) geçer. Kondansatörün akımı i = C1·dVo/dt olduğu için Vo'yu bilmek akımı da bilmek demek. Teorik türetme bu fikirle başlar. ${acts(toCalc)}</p>`)}` });
+
+    steps.push({ kind: 'prep', code: 'H2', t: `Jeneratör: 0 → ${V} V kare dalga, 5 kHz`, chk: ['sqW', 'sqF', 'sqA', 'sqO'], html: () => `
+      ${B('simple', `Jeneratörün kare dalgası normalde eksiden artıya gider (−${V / 2} V … +${V / 2} V). Bize <b>0 V … ${V} V</b> lazım. Bunun için dalgayı <b>${V / 2} V yukarı kaydırıyoruz</b> (DC ofset).`)}
+      <ol class="steps">
+        <li>Tezgâhta <b>jeneratöre (FG1) tıkla</b>; sağda ayarları açılır.</li>
+        <li data-chk="sqW">Dalga: <b>Kare</b>.</li>
+        <li data-chk="sqF">Frekans: <b>5 kHz</b> (çipe tıkla).</li>
+        <li data-chk="sqA">Genlik: <b>${V} Vpp</b> (tepeden tepeye = basamağın boyu V<sub>SQ</sub>).</li>
+        <li data-chk="sqO">DC ofset: <b>${V / 2} V</b> (genliğin yarısı). ${acts(doit('fgSq4'))}</li>
+      </ol>
+      <div class="formula">en düşük = ofset − Vpp/2 = ${V / 2} − ${V / 2} = <b>0 V</b> &nbsp;·&nbsp; en yüksek = ofset + Vpp/2 = <b>${V} V</b></div>
+      ${B('why', `5 kHz → periyot T = 1/5000 = <b>200 µs</b>; %50 görev oranı → <b>100 µs</b> yüksek, <b>100 µs</b> alçak. En yavaş durumun (aşırı sönümlü) yerleşmesi ≈ ${n4(O.ts * 1e6, 0)} µs sürer: 100 µs'den kısa olduğu için her kenardan önce devre tamamen durulur. Yani her yükselen kenar "sıfır başlangıç koşullu" temiz bir basamaktır (Prelab'ın istediği).`)}
+      ${MORE('Prelab\'daki "Use a transient time step small enough" ne demek?', `LTspice gibi programlar zamanı küçük adımlarla ilerletir. Salınım periyodu ≈ ${n4(U.Td * 1e6, 1)} µs; bir periyotta en az 50–100 nokta olmalı → adım ≤ ~0.2 µs (ör. <code>.tran 0 400u 0 0.1u</code>). Bu simülatör adımı kendisi küçük seçer (≈ 0.1 µs).`)}` });
+
+    steps.push({ kind: 'prep', code: 'H3', t: 'Ekranı kenara odakla (aynı zaman ekseni)', chk: ['view', 'trig'], html: () => `
+      ${B('simple', 'Yükselen kenarın hemen sonrasını büyüterek göreceğiz. İki kanalı da <b>aynı ölçek</b> ve <b>aynı sıfır çizgisi</b>yle ayarlıyoruz ki sarı ile mavi doğrudan karşılaştırılabilsin.')}
+      <ol class="steps">
+        <li>Önce <b>CH2</b> tuşuyla mavi kanalı aç, sonra <b>Autoset</b>. Ekranda ~2.5 kare dalga görürsün; dalgalanma çok sıkışık. ${acts(show('ch2,autoset'), doit('autoset'))}</li>
+        <li><b>TIME/DIV</b> (HORIZONTAL SCALE) düğmesini saat yönünde çevir → <b>10 µs/div</b> (ekran 100 µs = tam bir yüksek yarım periyot). Şu an: ${live('tdiv')} ${acts(show('hscale'))}</li>
+        <li><b>H POSITION</b> düğmesini çevir: üstteki turuncu tetik işareti (▼) <b>soldan 2. çizgiye</b> gelsin (H POSITION = 30 µs). Kenarın öncesini de biraz görürüz. ${acts(show('hpos'))}</li>
+        <li><b>CH1 SCALE</b> ve <b>CH2 SCALE</b> ikisini de <b>${fmt(State.VDIV[vIdx4()] * 10, 'V')}/div</b> yap; iki <b>POSITION</b> düğmesiyle iki sıfır çizgisini (soldaki ▶1 ▶2) <b>aynı yere</b>, alttan yarım kare yukarı getir. ${acts(show('ch1scale,ch2scale,ch1pos,ch2pos'))}</li>
+        <li data-chk="view,trig">Tetik: kaynak CH1, yükselen kenar, seviye ≈ ${V / 2} V (Autoset zaten böyle yapar). Sağ üstte <b>Trig'd</b>. ${acts(doit('edgeView', '⚡ Hepsini benim için ayarla'))}</li>
+      </ol>
+      ${B('see', `Sarı: soldan 2. çizgide 0'dan ${V} V'a dik bir basamak. Mavi: aynı anda yükselmeye başlar ve R1'e göre ya zıplar ya yavaşça yaklaşır. Sarının kenardan hemen sonra hafif çukurlaşması normaldir: akım jeneratörün 50 Ω'unda gerilim düşürür.`)}
+      ${B('why', 'Neden aynı ölçek? Raporda "Vi ve Vo aynı zaman ekseninde" isteniyor ve aşmayı göz kararı görmek için mavinin sarıyı ne kadar geçtiği doğrudan okunabilmeli.')}` });
+
+    steps.push({ kind: 'task', code: 'G1', short: 'Az sönümlü: tepe', goes: 'Table 1 → Runder, ζ, Vo,peak, overshoot, Rcrit', t: 'Az sönümlü (R = 0.5·Rcrit): ilk tepe ve aşma', chk: ['rU', 'mMax2', 'mOS2', 'capPk'], html: () => `
+      ${B('simple', `Zayıf amortisör: Vo hedefi (${V} V) <b>geçecek</b> ve zıplayacak. En yüksek noktayı (<b>ilk tepe</b>) ve hedefi yüzde kaç geçtiğini (<b>aşma, overshoot</b>) ölçüyoruz.`)}
+      <ol class="steps">
+        ${setRli('U')}
+        <li data-chk="mMax2"><b>Measure</b> → ${BOT(1, 'Add Measurement')} → ${SIDE(4, 'Source1')} ile <b>CH2</b> → ${SIDE(1, 'V/I')} → ${KNOB('VARIABLE')}, <b>Max</b> → <b>Select</b>. ${acts(show('measure,bot0,side3,side0,variable,select'), doit('mMax2'))}</li>
+        <li data-chk="mOS2">Aynı listede biraz aşağıda <b>ROVShoot</b> ("Rising OVerShoot" = yükselen kenardan sonraki aşma %) → <b>Select</b> → <b>Menu Off</b>. ${acts(doit('mOS2'))}</li>
+        <li data-chk="capPk">CH2 Max = ${live('vmax2')} → <b>Vo,peak</b> · ROVShoot = ${live('os2')} → <b>aşma</b>. ${acts(doit('capPk', '📥 Tabloya kaydet'))}</li>
+      </ol>
+      ${stepPic('U')}
+      ${B('see', `Mavi, sarının basamağını geçip ≈ ${n4(U.peak * V, 2)} V'a çıkar, sonra aşağı yukarı birkaç kez sallanarak ${V} V'ta durulur. Bu sallanma bobin ile kondansatörün enerjiyi birbirine paslamasıdır.`)}
+      ${B('why', `Aşma (%) = (ilk tepe − son değer) / basamak boyu × 100. Osiloskobun ROVShoot ölçümü tam olarak bunu yapar. Aşma sadece ζ'ya bağlıdır: %OS = 100·e<sup>−πζ/√(1−ζ²)</sup>. Tersinden ζ bulunur: ζ = −ln(OS)/√(π² + ln²(OS)). Kaydet tuşu bunu da yapar ve <b>Rcrit = R / ζ</b> ile kritik direnci ölçümden hesaplar.`)}
+      ${B('write', `<table><tr><th>Table 1 satırı</th><th>Theoretical</th><th>Simulation</th></tr>
+        <tr><td>Underdamped Runder (Ω)</td><td><b>${n4(U.R, 1)}</b></td><td>toplam R (R1 + jeneratör)</td></tr>
+        <tr><td>Underdamped ratio ζ</td><td><b>0.500</b></td><td>aşmadan hesaplanan ζ</td></tr>
+        <tr><td>First peak Vo,peak (V)</td><td><b>${n4(U.peak * V)}</b></td><td>CH2 Max</td></tr>
+        <tr><td>Overshoot (%)</td><td><b>${n4(U.os, 2)}</b></td><td>ROVShoot</td></tr>
+        <tr><td>Critical resistance Rcrit (Ω)</td><td><b>${n4(v.Rc, 1)}</b></td><td>Runder / ζ<sub>ölçülen</sub></td></tr></table>`)}
+      ${MORE(`%${n4(U.os, 2)} ve ${n4(U.peak * V, 3)} V nereden çıktı?`, `<div class="formula">%OS = 100·e<sup>−π·0.5/√(1−0.25)</sup> = 100·e<sup>−1.8138</sup> = <b>${n4(U.os, 2)} %</b><br>Vo,peak = V<sub>SQ</sub>·(1 + OS) = ${V} × ${n4(U.peak, 4)} = <b>${n4(U.peak * V)} V</b> · t<sub>p</sub> = π/ω<sub>d</sub> = <b>${n4(U.tp * 1e6, 2)} µs</b>'de</div>Adım adım hali: ${acts(toCalc)}`)}
+      <ol class="steps">${refStep('U')}</ol>` });
+
+    steps.push({ kind: 'task', code: 'G2', short: 'Az sönümlü: t<sub>s</sub>, Td', goes: 'Table 1 → Underdamped settling time, f0', t: 'Az sönümlü: yerleşme süresi ve salınım periyodu', chk: ['rU', 'tsU', 'td'], html: () => `
+      ${B('simple', `<b>Yerleşme süresi (t<sub>s</sub>)</b>: kenardan sonra Vo'nun ${V} V'un <b>±%2</b>'si içine girip <b>bir daha çıkmadığı</b> ana kadar geçen süre. Yani "zıplama bitti" anı. Bunu osiloskobun dikey imleç çizgileriyle ölçeceğiz.`)}
+      <p>±%2 bandı: ${V} × 0.98 = <b>${n4(0.98 * V, 2)} V</b> ile ${V} × 1.02 = <b>${n4(1.02 * V, 2)} V</b> arası.</p>
+      <ol class="steps">
+        ${setRli('U')}
+        ${tsHow('U')}
+      </ol>
+      <h3>Salınım periyodu Td (Prelab 5.2)</h3>
+      ${B('simple', `Prelab "iki ardışık tepe arası" diyor. Ama ζ = 0.5'te her yarım salınım bir öncekinin yalnızca <b>%${n4(U.os, 1)}</b>'i kadar: ilk tepe +%${n4(U.os, 1)}, sonraki çukur −%${n4(U.os * U.os / 100, 2)}, ikinci tepe sadece <b>+%${n4(U.os ** 3 / 1e4, 2)}</b> (${n4(U.os ** 3 / 1e6 * V * 1000, 0)} mV) — ekranda <b>görünmez</b>. Bu yüzden ilk tepe ile ilk çukur arasını ölçüyoruz: bu <b>yarım periyot</b>tur, Td = 2 × Δ.`)}
+      <ol class="steps">
+        <li>① imleci <b>ilk tepeye</b> (mavinin en yüksek yeri), ② imleci <b>hemen sonraki çukura</b> (hedefin altına indiği en düşük yer) koy. Kutudaki ① gerilimi en büyük, ② gerilimi en küçük olsun. ${acts(doit('tdCurs', '⚡ İmleçleri benim için koy'))}</li>
+        <li data-chk="td">Δ = <b>Td/2</b>. Şu an Δ = ${live('dt')}. Kaydet tuşu 2 ile çarpar. ${acts(doit('capTd', '📥 Tabloya kaydet (Td = 2Δ)'))} <span class="muted">Otomatik kontrol: ${live('tdAuto')}</span></li>
+      </ol>
+      ${B('why', `Ardışık iki tepe (ya da tepe → çukur → tepe) arası süre, <b>sönümlü</b> salınımın periyodudur: Td = 2π/ω<sub>d</sub>, ω<sub>d</sub> = ω<sub>0</sub>·√(1 − ζ²). Kaydet tuşu ölçtüğün Td ve ζ'dan doğal frekansı hesaplar: f<sub>0</sub> = (1/Td) / √(1 − ζ²). Teori: Td = <b>${n4(U.Td * 1e6, 2)} µs</b>, f<sub>d</sub> = ${n4(U.fd / 1000, 2)} kHz, f<sub>0</sub> = ${n4(U.f0 / 1000, 2)} kHz.`)}
+      ${B('write', `<table><tr><th>Table 1 satırı</th><th>Theoretical</th><th>Simulation</th></tr>
+        <tr><td>Underdamped settling time (μs)</td><td><b>${n4(U.ts * 1e6, 2)}</b></td><td>imleç Δ</td></tr>
+        <tr><td>Natural frequency f0 (kHz)</td><td><b>${n4(U.f0 / 1000, 2)}</b></td><td>(1/Td)/√(1−ζ²)</td></tr></table>`)}
+      ${B('tip', `±%2 bandı sadece ${n4(0.04 * V, 2)} V genişliğinde; 8 bitlik ekranda bu 2–4 ADC basamağı eder. Bu yüzden imleçle ölçtüğün t<sub>s</sub> teoriden ~1 µs farklı çıkabilir — normaldir, raporda "ölçüm çözünürlüğü" diye yaz.`)}
+      ${MORE('Kitaptaki t_s ≈ 4/(ζω₀) neden biraz farklı?', `4/(ζω₀) = ${n4(U.tsApprox * 1e6, 2)} µs sadece zarfın (e<sup>−αt</sup>) %2'ye indiği andır, bir <b>yaklaşım</b>dır. Gerçek dalga zarfa her zaman değmez; Prelab'ın tanımına göre tam değer (dalganın banda son girişi) <b>${n4(U.ts * 1e6, 2)} µs</b>. Raporda ikisini de yazıp farkı açıklayabilirsin.`)}` });
+
+    steps.push({ kind: 'task', code: 'G3', short: 'Kritik: t<sub>s</sub>', goes: 'Table 1 → Critical settling time', t: 'Kritik sönümlü (R = Rcrit): yerleşme süresi', chk: ['rC', 'tsC'], html: () => `
+      ${B('simple', `Tam ayarlı amortisör: Vo hedefi <b>hiç geçmeden</b> ve aşmasız durumlar içinde <b>en hızlı</b> şekilde ${V} V'a ulaşır.`)}
+      <ol class="steps">
+        ${setRli('C')}
+        <li>ROVShoot şimdi ≈ <b>0 %</b> olmalı: ${live('os2')}. (Ekranda küçük bir sayı görürsen 8 bitlik ölçüm çözünürlüğündendir.)</li>
+        ${tsHow('C')}
+        ${refStep('C')}
+      </ol>
+      ${stepPic('C')}
+      ${B('write', `Critical settling time (μs): Theoretical = <b>${n4(C.ts * 1e6, 2)}</b> · Simulation = imleç Δ. Kritikte aşma yoktur: "first peak" = <b>N/A</b>.`)}
+      ${MORE(`${n4(C.ts * 1e6, 2)} µs nereden çıktı?`, `<div class="formula">Vo = V<sub>SQ</sub>[1 − (1 + ω<sub>0</sub>t)e<sup>−ω<sub>0</sub>t</sup>] → (1 + x)e<sup>−x</sup> = 0.02 → x = ω<sub>0</sub>t<sub>s</sub> = 5.834<br>t<sub>s</sub> = 5.834 / ${sci(C.w0)} = <b>${n4(C.ts * 1e6, 2)} µs</b></div>${acts(toCalc)}`)}` });
+
+    steps.push({ kind: 'task', code: 'G4', short: 'Aşırı: t<sub>s</sub>', goes: 'Table 1 → Rover, Overdamped settling time', t: 'Aşırı sönümlü (R = 2·Rcrit): yerleşme süresi', chk: ['rO', 'tsO'], html: () => `
+      ${B('simple', 'Çok sert amortisör: Vo hedefi yine geçmez ama <b>yavaş</b> tırmanır. Direnç enerjiyi o kadar çok yer ki bobin–kondansatör alışverişi hiç başlayamaz.')}
+      <ol class="steps">
+        ${setRli('O')}
+        ${tsHow('O')}
+        ${refStep('O')}
+      </ol>
+      ${stepPic('O')}
+      ${B('write', `<table><tr><th>Table 1 satırı</th><th>Theoretical</th><th>Simulation</th></tr>
+        <tr><td>Overdamped Rover (Ω)</td><td><b>${n4(O.R, 1)}</b></td><td>toplam R</td></tr>
+        <tr><td>Overdamped settling time (μs)</td><td><b>${n4(O.ts * 1e6, 2)}</b></td><td>imleç Δ</td></tr></table>`)}
+      ${B('why', `Aşırı sönümde iki gerçek kök var: s₁ = ${sci(O.s[0])} ve s₂ = ${sci(O.s[1])} 1/s. Hızlı olan (s₂) çabucak söner; geriye yavaş olan (s₁) kalır ve yerleşmeyi o belirler: t<sub>s</sub> ≈ 4/|s₁| = ${n4(O.tsApprox * 1e6, 1)} µs (tam değer ${n4(O.ts * 1e6, 2)} µs). R'yi artırdıkça s₁ sıfıra yaklaşır → devre daha da <b>yavaşlar</b>.`)}` });
+
+    steps.push({ kind: 'task', code: 'G5', short: 'Üçü bir arada', goes: 'Rapor → üç dalga aynı zaman ekseninde', t: 'Üç durumu aynı ekranda karşılaştır', chk: ['refsOn'], html: () => `
+      ${B('simple', 'G1, G3 ve G4\'te kaydettiğin üç mavi dalga beyaz referans (REF) çizgisi olarak ekranda duruyor. Hepsi <b>aynı zaman ekseninde</b> — rapordaki karşılaştırma şekli bu.')}
+      <ol class="steps">
+        <li data-chk="refsOn"><b>R</b> (REF) tuşu → R1, R2, R3 için ${SIDE(1, 'Display')} = <b>On</b>. ${acts(show('ref,side0'), doit('refsOn', '⚡ Üçünü de göster'))}</li>
+        <li>Ekran görüntüsü al: ekranın solundaki <b>Hardcopy</b>. ${acts(show('hardcopy'), doit('img', '📷 Görüntü al'))}</li>
+      </ol>
+      ${B('see', `En çok zıplayan beyaz çizgi = R1 (az sönümlü). Hiç geçmeden en hızlı yerleşen = R2 (kritik). En yavaş tırmanan = R3 (aşırı). Raporda bu üçünü etiketle.`)}
+      ${stepPic()}
+      <h3>Prelab'ın sorduğu 3 soru — cevaplar</h3>
+      <table>
+        <tr><td><b>Hangisi salınır?</b></td><td style="color:${CASES.U.col}">Az sönümlü (ζ = 0.5 &lt; 1): karmaşık eşlenik kökler → salınım.</td></tr>
+        <tr><td><b>Hangisi aşmadan en hızlı yerleşir?</b></td><td style="color:${CASES.C.col}">Kritik sönümlü (ζ = 1): t<sub>s</sub> = ${n4(C.ts * 1e6, 1)} µs.</td></tr>
+        <tr><td><b>Hangisi daha yavaş yükselir?</b></td><td style="color:${CASES.O.col}">Aşırı sönümlü (ζ = 2): t<sub>s</sub> = ${n4(O.ts * 1e6, 1)} µs.</td></tr>
+      </table>
+      ${B('tip', `İlginç: az sönümlü (${n4(U.ts * 1e6, 1)} µs) hedefe kritikten <b>daha erken çıkar</b> (t<sub>p</sub> = ${n4(U.tp * 1e6, 1)} µs) ama zıpladığı için yerleşmesi daha uzun sürer. "En hızlı ve aşmasız" sadece kritik sönümdür.`)}` });
+
+    steps.push({ kind: 'bonus', code: '+', t: 'Keşfet: R\'yi değiştir, sönümü izle', chk: [], html: () => `
+      ${B('simple', 'R1\'in değer kutusunun üstünde fare tekerleğini çevir: R değişir, ekrandaki dalga anında değişir. Aşmanın nasıl kaybolduğunu kendi gözünle gör.')}
+      <p>Şu an: toplam R = ${live('rtot')} · ζ = ${live('zeta')} · beklenen aşma ${live('thBos')} (ölçülen ${live('os2')}) · beklenen t<sub>s</sub> ${live('thBts')}</p>
+      <h3>Enerji gözüyle (Prelab 5.2)</h3>
+      <ul>
+        <li>Kondansatör enerjisi ½·C·Vo², bobin enerjisi ½·L·i². Vo tepedeyken akım 0'dır: <b>bütün enerji kondansatörde</b>. Vo hedefi en hızlı geçerken akım en büyüktür: <b>enerji bobinde</b>.</li>
+        <li>Bu iki depo enerjiyi sürekli birbirine paslar → salınım. Pas sıklığı ω<sub>0</sub> = 1/√(LC) ile belirlenir.</li>
+        <li>Direnç her paslaşmada R·i² kadar gücü <b>ısıya</b> çevirir. Küçük R: az kayıp → çok tur zıplar, aşma büyük, yerleşme uzun. Kritik R: enerji ilk turu tamamlayamadan tükenir → aşma yok, en hızlı. Büyük R: akım çok kısılır, kondansatör yavaş dolar → yerleşme yine uzar.</li>
+      </ul>
+      ${splanePic()}
+      ${acts(toTh)}` });
+
+    steps.push({ kind: 'end', code: '✓', t: 'Tabloyu tamamla, hata analizi ve rapor', chk: ['t1'], html: () => `
+      <ol class="steps">
+        <li data-chk="t1"><b>📋 Tablolar</b> sekmesinde Table 1'in Simulation sütunu dolu olmalı. ${acts(`<button data-tab="tables">📋 Tablolara git</button>`)}</li>
+        <li>Ekran görüntüleri: her durum için bir tane (kenar + yerleşme görünsün) ve G5'teki üçlü karşılaştırma. ${acts(show('hardcopy'), doit('img', '📷 Görüntü al'))}</li>
+      </ol>
+      <h3>Hata yüzdesi (Prelab 5.1)</h3>
+      <div class="formula">Error (%) = |teorik − simülasyon| / |teorik| × 100</div>
+      <p>Teorik değeri <b>sıfır</b> olan aşmalarda (kritik, aşırı) yüzde hesaplanamaz: <b>yüzde puan farkını</b> yaz (ör. ölçülen 0.4 % → fark 0.4 puan).</p>
+      <h3>Fark %5'i geçerse ne yazarım?</h3>
+      <ul>
+        <li><b>Direnç seçimi</b>: standart değer kullandıysan (ör. 470 Ω, 910 Ω, 1.8 kΩ) ζ değişir. Jeneratörün <b>50 Ω</b>'u ve bobinin kendi direnci (gerçek bobinde birkaç Ω – onlarca Ω) da seriye eklenir.</li>
+        <li><b>Kaynağın sonlu yükselme süresi</b>: gerçek kare dalga anında zıplamaz; kenar yavaşsa aşma azalır.</li>
+        <li><b>Simülasyon zaman adımı</b>: adım büyükse tepe kaçırılır (aşma küçük çıkar).</li>
+        <li><b>İmleç konumlandırma</b>: ±%2 bandı çok dar (${n4(0.04 * V, 2)} V), birkaç ADC basamağı. 8 bit osiloskopta t<sub>s</sub> ±1 µs oynayabilir.</li>
+        <li><b>Bileşen toleransı</b>: L ±%10, C ±%5–10 → ω<sub>0</sub> ve Rcrit değişir.</li>
+        <li><b>Prob</b>: ×10 probun ~10–15 pF'ı C1'e (4.7 nF) paralel eklenir (%0.3, küçük).</li>
+      </ul>
+      <h3>Rapor kontrol listesi</h3>
+      <ul>
+        <li>☐ Şema (Şekil 1) ve üç R için etiketli Vi, Vo grafikleri</li>
+        <li>☐ KVL → diferansiyel denklem → H(s) türetmesi, ω<sub>0</sub>, ζ, Rcrit (${acts(toCalc)})</li>
+        <li>☐ Her durum için karakteristik kökler ve basamak yanıtı formülü</li>
+        <li>☐ MATLAB kodu ve grafikleri (hazır kod: 🧮 Teorik hesaplar → en alt)</li>
+        <li>☐ Table 1, hata analizi, sönüm ve enerji tartışması (Td ↔ ω<sub>d</sub> karşılaştırması)</li>
+      </ul>` });
+    return steps;
+  }
+
+  /* -------- tablolar -------- */
+  const ROWS4 = () => {
+    const v = rlcVals(), V = tVi(), U = thCase('U'), C = thCase('C'), O = thCase('O');
+    return [
+      ['rcrit', 'Critical resistance Rcrit (Ω)', v.Rc, 1],
+      ['f0', 'Natural frequency f0 (kHz)', U.f0 / 1000, 3],
+      ['rU', 'Underdamped Runder (Ω)', U.R, 1],
+      ['zU', 'Underdamped ratio ζ', U.z, 3],
+      ['vpk', 'Underdamped first peak Vo,peak (V)', U.peak * V, 3],
+      ['os', 'Underdamped overshoot (%)', U.os, 2],
+      ['tsU', 'Underdamped settling time (μs)', U.ts * 1e6, 2],
+      ['tsC', 'Critical settling time (μs)', C.ts * 1e6, 2],
+      ['rO', 'Overdamped Rover (Ω)', O.R, 1],
+      ['tsO', 'Overdamped settling time (μs)', O.ts * 1e6, 2],
+    ];
+  };
+  const pctErr = (m, th) => Math.abs(th - m) / Math.abs(th) * 100;
+  function rlcTables() {
+    const T = dat4(), U = thCase('U');
+    const errCell = (m, th) => { if (!isFinite(m)) return '<td class="err"></td>'; const e = pctErr(m, th); return `<td class="err ${e <= 5 ? 'good' : 'bad'}">${e.toFixed(2)}%</td>`; };
+    const inp = (attr, k, m, dg) => `<input data-${attr}="${k}" value="${isFinite(m) ? (+m).toFixed(dg) : ''}" placeholder="—">`;
+    const rows = ROWS4().map(([k, lbl, th, dg]) => `<tr><td>${lbl}</td><td class="th">${(+th).toFixed(dg)}</td>
+      <td>${inp('t1', k, T.t1[k], dg)}</td>${errCell(T.t1[k], th)}<td>${inp('ex', k, T.ex[k], dg)}</td>${errCell(T.ex[k], th)}</tr>`).join('');
+    const pp = (m) => isFinite(m) ? `<td class="err ${Math.abs(m) <= 1 ? 'good' : 'bad'}">${Math.abs(m).toFixed(2)} puan</td>` : '<td class="err"></td>';
+    const x = T.x;
+    return `<h3>Table 1 — Theoretical, simulated and experimental comparison</h3>
+      <table class="lab"><tr><th>Parameter</th><th>Theoretical</th><th>Simulation</th><th>Hata</th><th>Experimental</th><th>Hata</th></tr>${rows}</table>
+      <p class="muted">Teori: ideal kaynak, toplam seri direnç = Prelab'daki R. Hata = |teorik − ölçüm| / |teorik| × 100 (Prelab 5.1). <b>Experimental</b> sütununu laboratuvarda doldur.</p>
+      <h3>Ek ölçümler (5.1 sıfır aşmalar · 5.2 sönüm analizi)</h3>
+      <table class="lab"><tr><th>Büyüklük</th><th>Teori</th><th>Ölçüm</th><th>Fark</th></tr>
+        <tr><td>Salınım periyodu Td (µs) — 2 × (tepe → çukur)</td><td class="th">${n4(U.Td * 1e6, 3)}</td><td>${inp('x', 'td', x.td, 3)}</td>${errCell(x.td, U.Td * 1e6)}</tr>
+        <tr><td>Sönümlü frekans f<sub>d</sub> = 1/Td (kHz)</td><td class="th">${n4(U.fd / 1000, 3)}</td><td>${isFinite(x.td) ? n4(1000 / x.td, 3) : '—'}</td>${errCell(isFinite(x.td) ? 1000 / x.td : NaN, U.fd / 1000)}</tr>
+        <tr><td>Kritik sönümlü aşma (%)</td><td class="th">0</td><td>${inp('x', 'osC', x.osC, 2)}</td>${pp(x.osC)}</tr>
+        <tr><td>Aşırı sönümlü aşma (%)</td><td class="th">0</td><td>${inp('x', 'osO', x.osO, 2)}</td>${pp(x.osO)}</tr>
+        <tr><td>Kritik durumda kullanılan toplam R (Ω)</td><td class="th">${n4(rlcVals().Rc, 1)}</td><td>${inp('x', 'rC', x.rC, 1)}</td>${errCell(x.rC, rlcVals().Rc)}</tr>
+      </table>
+      <p class="muted">Kritik ve aşırı sönümlüde "first peak" = <b>N/A</b>. Sıfır beklenen aşmalarda fark yüzde puan olarak verilir.</p>`;
+  }
+  function rlcText(n) {
+    const T = dat4(), x = (v, dg) => isFinite(v) ? (+v).toFixed(dg) : '';
+    if (n === 1) return ['Parameter\tTheoretical Value\tSimulation Value\tExperimental Value', ...ROWS4().map(([k, lbl, th, dg]) => `${lbl}\t${(+th).toFixed(dg)}\t${x(T.t1[k], dg)}\t${x(T.ex[k], dg)}`)].join('\n');
+    const U = thCase('U');
+    return ['Quantity\tTheoretical\tSimulation',
+      `Damped period Td (us)\t${n4(U.Td * 1e6)}\t${x(T.x.td, 3)}`,
+      `Damped frequency fd (kHz)\t${n4(U.fd / 1000)}\t${isFinite(T.x.td) ? n4(1000 / T.x.td) : ''}`,
+      `Critical overshoot (%)\t0\t${x(T.x.osC, 2)}`, `Overdamped overshoot (%)\t0\t${x(T.x.osO, 2)}`].join('\n');
+  }
+
+  /* -------- teori sekmesi -------- */
+  function rlcTheory() {
+    const d = D(), inf = I(), v = rlcVals(), U = thCase('U');
+    return `<h2>🧠 Teori — ${d.title}</h2>
+      ${B('simple', inf.simple)}
+      <div class="formula">${Circuits.diagram()}</div>
+      <h3>Neden salınır? (enerji alışverişi)</h3><p>${inf.why}</p>
+      <table><tr><th></th><th>Kondansatör C</th><th>Bobin L</th><th>Direnç R</th></tr>
+        <tr><td>Ne yapar?</td><td>Gerilimi aniden değişmez</td><td>Akımı aniden değişmez</td><td>Enerjiyi ısıya çevirir</td></tr>
+        <tr><td>Enerji</td><td>½·C·v²</td><td>½·L·i²</td><td>p = R·i² (kayıp)</td></tr>
+        <tr><td>Bağıntı</td><td>i = C·dv/dt</td><td>v = L·di/dt</td><td>v = R·i</td></tr></table>
+      <h3>Denklem ve transfer fonksiyonu</h3>
+      <div class="formula">LC·Vo'' + RC·Vo' + Vo = Vi &nbsp;→&nbsp; H(s) = Vo(s)/Vi(s) = 1 / (LCs² + RCs + 1) = ω<sub>0</sub>² / (s² + 2ζω<sub>0</sub>s + ω<sub>0</sub>²)</div>
+      <div class="formula">ω<sub>0</sub> = 1/√(LC) = <b>${sci(v.w0)} rad/s</b> (f<sub>0</sub> = ${n4(v.w0 / 2 / Math.PI / 1000, 2)} kHz) · ζ = (R/2)·√(C/L) · R<sub>crit</sub> = 2√(L/C) = <b>${n4(v.Rc, 1)} Ω</b></div>
+      <h3>Üç durum</h3>
+      <table><tr><th>Durum</th><th>ζ</th><th>Kökler s<sub>1,2</sub> = −α ± √(α² − ω<sub>0</sub>²)</th><th>Yanıt</th></tr>
+        <tr><td style="color:${CASES.U.col}">Az sönümlü</td><td>&lt; 1</td><td>karmaşık eşlenik: −α ± jω<sub>d</sub></td><td>aşar, salınır</td></tr>
+        <tr><td style="color:${CASES.C.col}">Kritik</td><td>= 1</td><td>çift gerçek: −ω<sub>0</sub></td><td>aşmaz, en hızlı</td></tr>
+        <tr><td style="color:${CASES.O.col}">Aşırı</td><td>&gt; 1</td><td>iki farklı gerçek</td><td>aşmaz, yavaş</td></tr></table>
+      <p class="muted">α = R/(2L) "sönüm hızı", ω<sub>d</sub> = ω<sub>0</sub>√(1 − ζ²) "sönümlü açısal frekans".</p>
+      ${stepPic()}
+      ${splanePic()}
+      <h3>🧮 Hesap makinesi (herhangi bir R için)</h3>
+      <div class="calc"><span>Toplam R (Ω)</span><input id="c4R" value="${n4(U.R, 1)}"><span>V<sub>SQ</sub> (V)</span><input id="c4V" value="${tVi()}">
+        <span>ζ</span><b id="o4z"></b><span>Durum</span><b id="o4k"></b><span>Kökler</span><b id="o4s"></b><span>Aşma</span><b id="o4os"></b><span>İlk tepe</span><b id="o4pk"></b><span>t<sub>s</sub> (%2)</span><b id="o4ts"></b><span>Td</span><b id="o4td"></b></div>
+      ${B('tip', 'L ve C tezgâhtaki değerlerden alınır. Bir bileşeni değiştirirsen bütün teori de değişir.')}`;
+  }
+  function calc4() {
+    const g = (id) => { const e = document.getElementById(id); return e ? Units.parse(e.value) : NaN; };
+    const o = (id, t) => { const el = document.getElementById(id); if (el) el.innerHTML = t; };
+    const R = g('c4R'), V = g('c4V'), v = rlcVals();
+    if (!(R > 0) || !(V > 0)) { o('o4z', '?'); return; }
+    const th = stepTh(R, v.L, v.C);
+    o('o4z', th.z.toFixed(4)); o('o4k', { U: 'Az sönümlü', C: 'Kritik', O: 'Aşırı sönümlü' }[th.kind]);
+    o('o4s', th.kind === 'U' ? `−${sci(th.a)} ± j${sci(th.wd)}` : th.kind === 'C' ? `−${sci(th.w0)} (çift)` : `${sci(th.s[0])}, ${sci(th.s[1])}`);
+    o('o4os', th.os.toFixed(2) + ' %'); o('o4pk', th.kind === 'U' ? fmt(th.peak * V, 'V', 4) + ` (t = ${fmt(th.tp, 's', 3)})` : 'N/A');
+    o('o4ts', fmt(th.ts, 's', 4)); o('o4td', th.kind === 'U' ? fmt(th.Td, 's', 4) : '—');
+  }
+
+  /* -------- teorik hesaplar sekmesi -------- */
+  function matlabCode() {
+    const v = rlcVals();
+    return `% EE212 Prelab 4 - Seri RLC basamak yaniti (Vo = C1 gerilimi)
+L = ${v.L}; C = ${v.C}; VSQ = ${tVi()};
+Rcrit = 2*sqrt(L/C);                 % kritik direnc
+R = [0.5 1 2]*Rcrit;                 % az / kritik / asiri sonumlu
+w0 = 1/sqrt(L*C);
+t = linspace(0, 60e-6, 6001);        % 0 ... 60 us
+names = {'Underdamped','Critically damped','Overdamped'};
+figure; hold on; grid on;
+plot(t*1e6, VSQ*ones(size(t)), 'k:', 'LineWidth', 1);   % giris basamagi
+for k = 1:3
+    a = R(k)/(2*L); z = a/w0;
+    if abs(z-1) < 1e-9
+        y = 1 - (1 + w0*t).*exp(-w0*t);
+    elseif z < 1
+        wd = w0*sqrt(1 - z^2);
+        y = 1 - exp(-a*t).*(cos(wd*t) + a/wd*sin(wd*t));
+    else
+        s1 = -a + sqrt(a^2 - w0^2); s2 = -a - sqrt(a^2 - w0^2);
+        y = 1 - (s2*exp(s1*t) - s1*exp(s2*t))/(s2 - s1);
+    end
+    Vo = VSQ*y;
+    plot(t*1e6, Vo, 'LineWidth', 1.6);
+    out = find(abs(y - 1) > 0.02, 1, 'last');            % +-2% bandindan son cikis
+    fprintf('%-18s R = %7.1f ohm  zeta = %.2f  peak = %.3f V  OS = %5.2f %%  ts = %6.2f us\\n', ...
+        names{k}, R(k), z, max(Vo), (max(y) - 1)*100*(max(y) > 1), t(out + 1)*1e6);
+end
+yline(0.98*VSQ, '--'); yline(1.02*VSQ, '--');
+xlabel('t (\\mus)'); ylabel('V_o (V)');
+legend(['V_i', names, {'\\pm2% band'}], 'Location', 'southeast');
+title('Series RLC step response (V_o across C_1)');
+
+% Control System Toolbox varsa ayni sonuc:
+% H = tf(1, [L*C R(1)*C 1]); stepinfo(VSQ*H, 'SettlingTimeThreshold', 0.02)`;
+  }
+  function rlcCalc() {
+    const v = rlcVals(), V = tVi(), U = thCase('U'), C = thCase('C'), O = thCase('O'), w0 = v.w0;
+    const LC = v.L * v.C, n = n4;
+    const caseBlock = (k, th) => {
+      const R = th.R, a = th.a;
+      let roots, resp, ex;
+      if (k === 'U') {
+        roots = `α² − ω<sub>0</sub>² = ${sci(a * a)} − ${sci(w0 * w0)} &lt; 0 → <b>karmaşık eşlenik</b><br>s<sub>1,2</sub> = −α ± jω<sub>d</sub>, ω<sub>d</sub> = √(ω<sub>0</sub>² − α²) = <b>${sci(th.wd)} rad/s</b><br>s<sub>1,2</sub> = <b>−${sci(a)} ± j${sci(th.wd)} 1/s</b>`;
+        resp = `Genel çözüm: Vo = V<sub>SQ</sub> + e<sup>−αt</sup>(A·cos ω<sub>d</sub>t + B·sin ω<sub>d</sub>t)<br>Vo(0) = 0 → A = −V<sub>SQ</sub> &nbsp;·&nbsp; i(0) = C·Vo'(0) = 0 → −αA + ω<sub>d</sub>B = 0 → B = −V<sub>SQ</sub>·α/ω<sub>d</sub><br><b>Vo(t) = ${V}·[1 − e<sup>−${sci(a)}t</sup>(cos(${sci(th.wd)}t) + ${n(a / th.wd, 4)}·sin(${sci(th.wd)}t))] V</b>`;
+        ex = `İlk tepe: Vo' = 0 → t<sub>p</sub> = π/ω<sub>d</sub> = <b>${n(th.tp * 1e6, 3)} µs</b><br>%OS = 100·e<sup>−απ/ω<sub>d</sub></sup> = 100·e<sup>−πζ/√(1−ζ²)</sup> = <b>${n(th.os, 2)} %</b> → Vo,peak = ${V}·(1 + ${n(th.os / 100, 4)}) = <b>${n(th.peak * V)} V</b><br>Td = 2π/ω<sub>d</sub> = <b>${n(th.Td * 1e6, 3)} µs</b> (f<sub>d</sub> = ${n(th.fd / 1000, 3)} kHz)<br>t<sub>s</sub> (%2, tam) = <b>${n(th.ts * 1e6, 2)} µs</b> · yaklaşık 4/α = ${n(th.tsApprox * 1e6, 2)} µs`;
+      } else if (k === 'C') {
+        roots = `α = ω<sub>0</sub> → α² − ω<sub>0</sub>² = 0 → <b>çift gerçek kök</b> s<sub>1</sub> = s<sub>2</sub> = −ω<sub>0</sub> = <b>−${sci(w0)} 1/s</b>`;
+        resp = `Genel çözüm: Vo = V<sub>SQ</sub> + (A + Bt)e<sup>−ω<sub>0</sub>t</sup><br>Vo(0) = 0 → A = −V<sub>SQ</sub> &nbsp;·&nbsp; Vo'(0) = 0 → B − ω<sub>0</sub>A = 0 → B = −ω<sub>0</sub>V<sub>SQ</sub><br><b>Vo(t) = ${V}·[1 − (1 + ${sci(w0)}t)·e<sup>−${sci(w0)}t</sup>] V</b>`;
+        ex = `Aşma yok (Vo' ≥ 0 her zaman) → first peak = <b>N/A</b><br>t<sub>s</sub>: (1 + x)e<sup>−x</sup> = 0.02 → x = 5.834 → t<sub>s</sub> = 5.834/ω<sub>0</sub> = <b>${n(th.ts * 1e6, 2)} µs</b>`;
+      } else {
+        const [s1, s2] = th.s;
+        roots = `α² − ω<sub>0</sub>² = ${sci(a * a - w0 * w0)} &gt; 0 → <b>iki farklı gerçek kök</b><br>s<sub>1</sub> = −α + √(α² − ω<sub>0</sub>²) = <b>${sci(s1)} 1/s</b> · s<sub>2</sub> = −α − √(α² − ω<sub>0</sub>²) = <b>${sci(s2)} 1/s</b>`;
+        resp = `Genel çözüm: Vo = V<sub>SQ</sub> + A·e<sup>s<sub>1</sub>t</sup> + B·e<sup>s<sub>2</sub>t</sup><br>Vo(0) = 0 → A + B = −V<sub>SQ</sub> &nbsp;·&nbsp; Vo'(0) = 0 → s<sub>1</sub>A + s<sub>2</sub>B = 0 → A = −V<sub>SQ</sub>·s<sub>2</sub>/(s<sub>2</sub> − s<sub>1</sub>) = ${n(-V * s2 / (s2 - s1), 4)}, B = V<sub>SQ</sub>·s<sub>1</sub>/(s<sub>2</sub> − s<sub>1</sub>) = ${n(V * s1 / (s2 - s1), 4)}<br><b>Vo(t) = ${V} − ${n(V * s2 / (s2 - s1), 4)}·e<sup>${sci(s1)}t</sup> + ${n(V * s1 / (s2 - s1), 4)}·e<sup>${sci(s2)}t</sup> V</b>`;
+        ex = `Aşma yok → first peak = <b>N/A</b><br>Yavaş kök baskın: t<sub>s</sub> ≈ 4/|s<sub>1</sub>| = ${n(th.tsApprox * 1e6, 2)} µs · tam (%2) = <b>${n(th.ts * 1e6, 2)} µs</b>`;
+      }
+      return cstep(1, 'Direnç ve sönüm oranı', `<div class="formula">R = ${CASES[k].k} × R<sub>crit</sub> = <b>${n(R, 1)} Ω</b> · α = R/(2L) = <b>${sci(a)} 1/s</b> · ζ = α/ω<sub>0</sub> = <b>${n(th.z, 3)}</b></div>`)
+        + cstep(2, 'Karakteristik kökler', `<div class="formula">${roots}</div>`)
+        + cstep(3, 'Basamak yanıtı (0 → V<sub>SQ</sub>, sıfır başlangıç koşulu)', `<div class="formula">${resp}</div>`)
+        + cstep(4, 'Tepe, aşma, yerleşme', `<div class="formula">${ex}</div>`, k === 'U' ? `Vo,peak = ${n(th.peak * V)} V · OS = ${n(th.os, 2)} % · t<sub>s</sub> = ${n(th.ts * 1e6, 2)} µs` : `t<sub>s</sub> = ${n(th.ts * 1e6, 2)} µs`);
+    };
+    return `<h2>🧮 Teorik hesaplamalar — ${D().title}</h2>
+      ${B('simple', 'Prelab Table 1\'in <b>Theoretical Value</b> sütunu ve Prelab\'ın istediği türetmeler. Her adım sayılarla. Rapora bu sırayla yazabilirsin.')}
+      ${viSel4()}
+      <h3>Kısaca sonuçlar (Theoretical sütunu)</h3>
+      <table class="lab"><tr><th>Table 1 satırı</th><th>Theoretical</th></tr>
+        ${ROWS4().map(([, lbl, th, dg]) => `<tr><td>${lbl}</td><td class="th"><b>${(+th).toFixed(dg)}</b></td></tr>`).join('')}</table>
+
+      <h3>0) Elimizdeki değerler</h3>
+      <table><tr><td>L1</td><td><b>${sci(v.L)} H</b></td></tr><tr><td>C1</td><td><b>${sci(v.C)} F</b></td></tr>
+        <tr><td>V<sub>SQ</sub> (basamak boyu)</td><td><b>${V} V</b> (0 → ${V} V)</td></tr><tr><td>Kare dalga</td><td>T = 200 µs, 5 kHz, her yarı 100 µs</td></tr></table>
+
+      <h3>1) Diferansiyel denklem (KVL)</h3>
+      ${cstep(1, 'Halkada gerilimlerin toplamı', `<div class="formula">Vi = v<sub>R</sub> + v<sub>L</sub> + Vo</div><p class="muted">Seri devre: R1, L1 ve C1'den aynı akım i(t) geçer.</p>`)}
+      ${cstep(2, 'Her gerilimi Vo ile yaz', `<div class="formula">i = C·dVo/dt<br>v<sub>R</sub> = R·i = RC·dVo/dt<br>v<sub>L</sub> = L·di/dt = LC·d²Vo/dt²</div>`)}
+      ${cstep(3, 'Yerine koy', `<div class="formula"><b>LC·d²Vo/dt² + RC·dVo/dt + Vo = Vi</b><br>LC'ye böl: d²Vo/dt² + (R/L)·dVo/dt + (1/LC)·Vo = (1/LC)·Vi</div>`, 'Devrenin diferansiyel denklemi')}
+
+      <h3>2) Transfer fonksiyonu H(s)</h3>
+      ${cstep(1, 'Laplace (başlangıç koşulları sıfır): d/dt → s', `<div class="formula">(LCs² + RCs + 1)·Vo(s) = Vi(s)</div>`)}
+      ${cstep(2, 'Oran', `<div class="formula"><b>H(s) = Vo(s)/Vi(s) = 1 / (LCs² + RCs + 1) = (1/LC) / (s² + (R/L)s + 1/LC)</b></div>`)}
+      ${cstep(3, 'Standart 2. derece biçimle karşılaştır', `<div class="formula">H(s) = ω<sub>0</sub>² / (s² + 2ζω<sub>0</sub>s + ω<sub>0</sub>²) → ω<sub>0</sub>² = 1/LC · 2ζω<sub>0</sub> = R/L</div><p class="muted">Karakteristik denklem: paydanın sıfırı → s² + (R/L)s + 1/LC = 0.</p>`)}
+
+      <h3>3) ω<sub>0</sub>, f<sub>0</sub>, ζ ve R<sub>crit</sub></h3>
+      ${cstep(1, 'Doğal (sönümsüz) frekans', `<div class="formula">LC = ${sci(v.L)} × ${sci(v.C)} = ${sci(LC)} s² · √LC = ${sci(Math.sqrt(LC))} s<br>ω<sub>0</sub> = 1/√LC = <b>${sci(w0)} rad/s</b> · f<sub>0</sub> = ω<sub>0</sub>/2π = <b>${n(w0 / 2 / Math.PI / 1000, 3)} kHz</b></div>`, `f0 = ${n(w0 / 2 / Math.PI / 1000, 3)} kHz`)}
+      ${cstep(2, 'Sönüm oranı', `<div class="formula">2ζω<sub>0</sub> = R/L → ζ = R/(2Lω<sub>0</sub>) = <b>(R/2)·√(C/L)</b></div>`)}
+      ${cstep(3, 'Kritik direnç (ζ = 1)', `<div class="formula">R<sub>crit</sub> = 2·√(L/C) = 2·√(${sci(v.L)} / ${sci(v.C)}) = 2·√${sci(v.L / v.C)} = 2 × ${n(Math.sqrt(v.L / v.C), 2)} = <b>${n(v.Rc, 2)} Ω</b></div>`, `Rcrit = ${n(v.Rc, 1)} Ω`)}
+      ${cstep(4, 'Üç direnç', `<table><tr><th></th><th>R</th><th>ζ</th></tr><tr><td style="color:${CASES.U.col}">R<sub>under</sub> = 0.5·R<sub>crit</sub></td><td><b>${n(U.R, 1)} Ω</b></td><td>0.5</td></tr><tr><td style="color:${CASES.C.col}">R<sub>critical</sub> = R<sub>crit</sub></td><td><b>${n(C.R, 1)} Ω</b></td><td>1</td></tr><tr><td style="color:${CASES.O.col}">R<sub>over</sub> = 2·R<sub>crit</sub></td><td><b>${n(O.R, 1)} Ω</b></td><td>2</td></tr></table>
+        ${store.rg4 === 'ideal' ? '' : '<p class="muted">Tezgâhta/laboratuvarda R1 = R − 50 Ω (jeneratörün 50 Ω\'u seride).</p>'}`)}
+
+      <h3 style="color:${CASES.U.col}">4) Az sönümlü (R = ${n(U.R, 1)} Ω)</h3>${caseBlock('U', U)}
+      <h3 style="color:${CASES.C.col}">5) Kritik sönümlü (R = ${n(C.R, 1)} Ω)</h3>${caseBlock('C', C)}
+      <h3 style="color:${CASES.O.col}">6) Aşırı sönümlü (R = ${n(O.R, 1)} Ω)</h3>${caseBlock('O', O)}
+
+      <h3>7) Grafik ve karşılaştırma</h3>
+      ${stepPic()}
+      ${cstep(1, 'Her yanıt bir sonraki kenardan önce yerleşiyor mu?', `<p>En uzun t<sub>s</sub> = ${n(O.ts * 1e6, 1)} µs &lt; yarım periyot 100 µs → <b>evet</b>. Her yükselen kenar sıfır başlangıç koşullu bir basamaktır.</p>`)}
+      ${cstep(2, 'Prelab sorusu', `<p><b style="color:${CASES.U.col}">Salınan</b>: az sönümlü · <b style="color:${CASES.C.col}">Aşmadan en hızlı</b>: kritik · <b style="color:${CASES.O.col}">En yavaş yükselen</b>: aşırı sönümlü.</p>`)}
+
+      <h3>8) Sönüm ve enerji (Prelab 5.2)</h3>
+      ${cstep(1, 'Ardışık iki tepe arası', `<div class="formula">Td = 2π/ω<sub>d</sub> = <b>${n(U.Td * 1e6, 3)} µs</b> → f<sub>d</sub> = ${n(U.fd / 1000, 3)} kHz (f<sub>0</sub> = ${n(U.f0 / 1000, 3)} kHz'ten √(1−ζ²) = ${n(Math.sqrt(1 - U.z * U.z), 4)} kat küçük)</div><p>Ardışık tepeler arası = Td. ζ = 0.5'te ikinci tepe çok küçük (+%${n(U.os ** 3 / 1e4, 2)}) olduğundan ölçümde tepe → çukur (Td/2) alınıp 2 ile çarpılır. Ayrıca ilk tepe zamanı t<sub>p</sub> = Td/2 = ${n(U.tp * 1e6, 3)} µs.</p>`)}
+      ${cstep(2, 'Enerji yorumu', `<p>Enerji kondansatör (½CVo²) ile bobin (½Li²) arasında gidip gelir. R her turda R·i² kadar ısıya çevirir. R küçük → kayıp az → çok tur, büyük aşma, uzun t<sub>s</sub>. R = R<sub>crit</sub> → enerji ilk turu tamamlamadan biter: aşmasız en hızlı. R büyük → akım kısılır, C yavaş dolar: t<sub>s</sub> yine uzar.</p>`)}
+
+      <h3>9) MATLAB kodu (Prelab: "share your code")</h3>
+      <p>Toolbox gerekmez. Üç yanıtı çizer, ζ, tepe, aşma ve t<sub>s</sub>'yi yazdırır. ${acts(doit('copyM', '📋 Kodu kopyala'))}</p>
+      <pre class="code">${matlabCode().replace(/&/g, '&amp;').replace(/</g, '&lt;')}</pre>
+
+      <h3>10) Hata yüzdesi (Prelab 5.1)</h3>
+      <div class="formula">Error (%) = |teorik − simülasyon| / |teorik| × 100<br>Örnek: teori ${n(U.os, 2)} %, simülasyon ${n(U.os * 0.97, 2)} % → |${n(U.os, 2)} − ${n(U.os * 0.97, 2)}| / ${n(U.os, 2)} × 100 = <b>3.00 %</b></div>
+      <p>Sıfır beklenen aşma için yüzde puan farkı yazılır.</p>
+      ${B('tip', 'Bütün sayılar tezgâhtaki L1, C1 ve seçtiğin V<sub>SQ</sub>\'dan hesaplanır.')}`;
+  }
+
+  /* -------- 🎖️ Brifing: lab sırasında sorulacak teori, formüller ve türetmeleri (sade, emir kipinde) -------- */
+  function briefHtml() {
+    const v = rlcVals(), V = tVi(), U = thCase('U'), C = thCase('C'), O = thCase('O'), n = n4;
+    const rg = store.rg4 === 'ideal' ? 0 : 50;
+    const SEC = (no, title, cmd, body) => `<section class="sec"><h3><span class="sno">${no}</span><span>${title}</span></h3>${cmd ? `<div class="cmd">${cmd}</div>` : ''}${body}</section>`;
+    const DRV = (...l) => `<div class="drv">${l.join('<br>')}</div>`;
+    const KEY = (h) => `<div class="key">${h}</div>`;
+    const ofs = O.s[1] / (O.s[1] - O.s[0]);
+    return `<div class="brief">
+      <div class="bhead"><h2>🎖️ Lab 4 Brifingi</h2>${acts(doit('printBrief', '🖨 Yazdır / PDF'))}</div>
+      <p class="lead">Dinle. Bugün tek bir şey yapıyoruz: <b>aynı L ve C ile R'yi değiştirip kondansatör geriliminin bir basamağa nasıl cevap verdiğini ölçmek</b>. Hoca aşağıdakilerin dışına çıkmaz. Sırayla oku, türetmeyi anla, kutulu formülleri deftere yaz.</p>
+
+      ${SEC('0', 'Hedef', '<b>Objektif:</b> az, kritik ve aşırı sönümü göster; aşmayı ve %2 yerleşme süresini ölç; teoriyle karşılaştır.', `
+        <p>R, devrenin ne kadar zıplayacağını <b>tek başına</b> belirler. Bu yüzden önce sınırı, yani <b>R<sub>crit</sub></b>'i buluyoruz. Sonra R'yi bu sınırın 0.5, 1 ve 2 katına kuruyoruz.</p>
+        <table><tr><td>L</td><td><b>${fmt(v.L, 'H')}</b></td><td>C</td><td><b>${fmt(v.C, 'F')}</b></td></tr>
+        <tr><td>Giriş</td><td><b>0 → ${V} V</b> kare</td><td>f</td><td><b>5 kHz</b> (her yarı 100 µs)</td></tr>
+        <tr><td>Çıkış Vo</td><td colspan="3"><b>C üzerindeki gerilim</b></td></tr></table>`)}
+
+      ${SEC('1', 'Devre denklemi', '▶ Vo için diferansiyel denklemi kur. Her şey buradan çıkıyor.', `
+        ${DRV('Tek halka, tek akım. KVL: &nbsp;V<sub>i</sub> = v<sub>R</sub> + v<sub>L</sub> + V<sub>o</sub>',
+          'Kondansatör: &nbsp;i = C·dV<sub>o</sub>/dt',
+          'Direnç: &nbsp;v<sub>R</sub> = R·i = RC·dV<sub>o</sub>/dt',
+          'Bobin: &nbsp;v<sub>L</sub> = L·di/dt = LC·d²V<sub>o</sub>/dt²')}
+        ${KEY('LC·V<sub>o</sub>″ + RC·V<sub>o</sub>′ + V<sub>o</sub> = V<sub>i</sub>')}`)}
+
+      ${SEC('2', 'Transfer fonksiyonu → ω<sub>0</sub> ve ζ', '▶ Laplace al, standart 2. derece biçimle eşle.', `
+        ${DRV('Başlangıç koşulları sıfır, d/dt → s: &nbsp;(LCs² + RCs + 1)·V<sub>o</sub>(s) = V<sub>i</sub>(s)')}
+        ${KEY('H(s) = V<sub>o</sub>/V<sub>i</sub> = 1 / (LCs² + RCs + 1) = (1/LC) / (s² + (R/L)s + 1/LC)')}
+        ${DRV('Standart biçim: &nbsp;ω<sub>0</sub>² / (s² + 2ζω<sub>0</sub>s + ω<sub>0</sub>²). Katsayıları eşle:',
+          'ω<sub>0</sub>² = 1/LC &nbsp;&nbsp;·&nbsp;&nbsp; 2ζω<sub>0</sub> = R/L')}
+        ${KEY(`ω<sub>0</sub> = 1/√(LC) &nbsp;&nbsp;&nbsp; ζ = (R/2)·√(C/L) &nbsp;&nbsp;&nbsp; α = R/(2L) = ζω<sub>0</sub>`)}
+        ${DRV(`ω<sub>0</sub> = 1/√(${sci(v.L)} × ${sci(v.C)}) = <b>${sci(v.w0)} rad/s</b> &nbsp;→&nbsp; f<sub>0</sub> = ω<sub>0</sub>/2π = <b>${n(v.w0 / 2 / Math.PI / 1000, 2)} kHz</b>`)}`)}
+
+      ${SEC('3', 'Kritik direnç', '▶ Salınımın bittiği sınırı bul.', `
+        ${DRV('Karakteristik denklem: &nbsp;s² + (R/L)s + 1/LC = 0',
+          'Kökler: &nbsp;s = −R/2L ± √( (R/2L)² − 1/LC )',
+          'Karekökün içi sıfır olunca salınım tam biter: &nbsp;(R/2L)² = 1/LC')}
+        ${KEY(`R<sub>crit</sub> = 2·√(L/C) = 2·√(${sci(v.L)} / ${sci(v.C)}) = <b>${n(v.Rc, 1)} Ω</b> &nbsp;&nbsp;(ζ = 1)`)}
+        <table><tr><th></th><th>R (toplam)</th><th>ζ</th><th>Kökler</th>${rg ? '<th>Takılan R1 = R − 50</th>' : ''}</tr>
+          <tr><td class="cu">Az sönümlü</td><td><b>${n(U.R, 1)} Ω</b></td><td>0.5</td><td>−${sci(U.a)} ± j${sci(U.wd)}</td>${rg ? `<td>${n(U.R - 50, 1)} Ω</td>` : ''}</tr>
+          <tr><td class="cc">Kritik</td><td><b>${n(C.R, 1)} Ω</b></td><td>1</td><td>−${sci(C.w0)} (çift)</td>${rg ? `<td>${n(C.R - 50, 1)} Ω</td>` : ''}</tr>
+          <tr><td class="co">Aşırı</td><td><b>${n(O.R, 1)} Ω</b></td><td>2</td><td>${sci(O.s[0])}, ${sci(O.s[1])}</td>${rg ? `<td>${n(O.R - 50, 1)} Ω</td>` : ''}</tr></table>
+        <p class="muted">Kökler 1/s birimindedir. Karmaşık kök = salınım. Gerçek kök = salınım yok.</p>`)}
+
+      ${SEC('4', 'Basamak yanıtı', '▶ Son değeri ve iki başlangıç koşulunu yaz. Formülün katsayılarını bunlar belirler.', `
+        ${DRV('<b>Son değer:</b> DC\'de C açık devre, akım 0 → R ve L\'de gerilim yok → V<sub>o</sub>(∞) = V<sub>SQ</sub>',
+          '<b>Koşul 1:</b> kondansatör gerilimi aniden değişmez → V<sub>o</sub>(0) = 0',
+          '<b>Koşul 2:</b> bobin akımı aniden değişmez → i(0) = 0 → V<sub>o</sub>′(0) = i(0)/C = 0',
+          'Çözüm = V<sub>SQ</sub> + homojen kısım. Koşulları uygula. Az sönümlü için:',
+          '&nbsp;&nbsp;V<sub>o</sub> = V<sub>SQ</sub> + e<sup>−αt</sup>(A cos ω<sub>d</sub>t + B sin ω<sub>d</sub>t) &nbsp;→&nbsp; A = −V<sub>SQ</sub>, &nbsp;B = −V<sub>SQ</sub>·α/ω<sub>d</sub>')}
+        ${KEY(`<span class="cu">Az:</span> &nbsp;V<sub>o</sub> = V<sub>SQ</sub>[1 − e<sup>−αt</sup>(cos ω<sub>d</sub>t + (α/ω<sub>d</sub>) sin ω<sub>d</sub>t)], &nbsp; ω<sub>d</sub> = ω<sub>0</sub>√(1 − ζ²)`)}
+        ${KEY(`<span class="cc">Kritik:</span> &nbsp;V<sub>o</sub> = V<sub>SQ</sub>[1 − (1 + ω<sub>0</sub>t)·e<sup>−ω<sub>0</sub>t</sup>]`)}
+        ${KEY(`<span class="co">Aşırı:</span> &nbsp;V<sub>o</sub> = V<sub>SQ</sub>[1 − (s<sub>2</sub>e<sup>s<sub>1</sub>t</sup> − s<sub>1</sub>e<sup>s<sub>2</sub>t</sup>) / (s<sub>2</sub> − s<sub>1</sub>)]`)}`)}
+
+      ${SEC('5', 'Az sönümlü: tepe, aşma, periyot', '▶ İlk tepenin zamanını bul, yerine koy, aşmayı çıkar.', `
+        ${DRV('Türev al: &nbsp;V<sub>o</sub>′ = V<sub>SQ</sub>·(ω<sub>0</sub>²/ω<sub>d</sub>)·e<sup>−αt</sup>·sin ω<sub>d</sub>t',
+          'Sıfıra eşitle. İlk sıfır sin ω<sub>d</sub>t = 0, yani ω<sub>d</sub>t = π:')}
+        ${KEY(`t<sub>p</sub> = π/ω<sub>d</sub> = <b>${n(U.tp * 1e6, 2)} µs</b>`)}
+        ${DRV('Yerine koy: cos π = −1, sin π = 0 &nbsp;→&nbsp; V<sub>o</sub>(t<sub>p</sub>) = V<sub>SQ</sub>(1 + e<sup>−απ/ω<sub>d</sub></sup>)',
+          'α/ω<sub>d</sub> = ζ/√(1 − ζ²) olduğu için:')}
+        ${KEY(`%OS = 100·e<sup>−πζ/√(1−ζ²)</sup> = <b>${n(U.os, 2)} %</b> &nbsp;&nbsp; V<sub>o,peak</sub> = V<sub>SQ</sub>(1 + OS) = <b>${n(U.peak * V)} V</b>`)}
+        ${DRV('Tersine çevir. Ölçtüğün aşmadan ζ bulunur, oradan da R<sub>crit</sub>:')}
+        ${KEY('ζ = −ln(OS) / √(π² + ln²(OS)) &nbsp;&nbsp;&nbsp; R<sub>crit</sub> = R / ζ')}
+        ${DRV('Ardışık tepeler arası süre bir sönümlü periyottur. Doğal frekansı ölçümden geri bul:')}
+        ${KEY(`T<sub>d</sub> = 2π/ω<sub>d</sub> = <b>${n(U.Td * 1e6, 2)} µs</b> &nbsp; (f<sub>d</sub> = ${n(U.fd / 1000, 2)} kHz) &nbsp;&nbsp; f<sub>0</sub> = f<sub>d</sub> / √(1 − ζ²)`)}`)}
+
+      ${SEC('6', '%2 yerleşme süresi', '▶ Tanım: kenardan sonra V<sub>o</sub> son değerin ±%2\'sine girip <b>bir daha çıkmadığı</b> an.', `
+        ${DRV(`<span class="cu">Az:</span> zarf e<sup>−αt</sup> = 0.02 → t = ln 50/α ≈ 4/α = 4/(ζω<sub>0</sub>) = ${n(U.tsApprox * 1e6, 2)} µs`,
+          `<span class="cc">Kritik:</span> (1 + ω<sub>0</sub>t)e<sup>−ω<sub>0</sub>t</sup> = 0.02 → ω<sub>0</sub>t = 5.834 → t = 5.834/ω<sub>0</sub>`,
+          `<span class="co">Aşırı:</span> hızlı kök çabuk söner, yavaş kök (s<sub>1</sub>) kalır: [s<sub>2</sub>/(s<sub>2</sub> − s<sub>1</sub>)]·e<sup>s<sub>1</sub>t</sup> = 0.02`,
+          `&nbsp;&nbsp;→ t = ln(50 × ${n(ofs, 4)}) / |s<sub>1</sub>| ≈ 4/|s<sub>1</sub>|`)}
+        ${KEY(`t<sub>s</sub>: &nbsp;<span class="cu">az ${n(U.ts * 1e6, 2)} µs</span> &nbsp;·&nbsp; <span class="cc">kritik ${n(C.ts * 1e6, 2)} µs</span> &nbsp;·&nbsp; <span class="co">aşırı ${n(O.ts * 1e6, 2)} µs</span>`)}
+        <p class="muted">Az sönümlüde 4/α bir yaklaşımdır. Tam değer (${n(U.ts * 1e6, 2)} µs), dalganın banda son girdiği andır. İkisini de bil.</p>`)}
+
+      ${SEC('7', 'Sonuç kartı — Table 1 teorik sütunu', '▶ Bunu deftere çerçeve içine yaz.', `
+        <table class="lab">${ROWS4().map(([, lbl, th, dg]) => `<tr><td>${lbl}</td><td class="th"><b>${(+th).toFixed(dg)}</b></td></tr>`).join('')}</table>
+        ${KEY('Hata (%) = |teorik − ölçüm| / |teorik| × 100 &nbsp;·&nbsp; teorisi 0 olan aşma → yüzde puan farkı')}`)}
+
+      ${SEC('8', 'Hoca sorarsa', '▶ Cevaplar kısa. Önce sonucu söyle, sonra tek cümleyle nedenini.', `<dl class="qa">
+        <dt>Neden kare dalga?</dt><dd>Her yükselen kenar bir basamak. En uzun t<sub>s</sub> (${n(O.ts * 1e6, 0)} µs) yarım periyottan (100 µs) kısa. Yani her kenar sıfır başlangıç koşullu, temiz bir basamak.</dd>
+        <dt>V<sub>o</sub>(0) = 0 ve V<sub>o</sub>′(0) = 0 nereden?</dt><dd>Kondansatör gerilimi ve bobin akımı aniden değişemez. i = C·V<sub>o</sub>′ olduğu için i(0) = 0, yani V<sub>o</sub>′(0) = 0.</dd>
+        <dt>Hangisi salınır, hangisi en hızlı, hangisi en yavaş?</dt><dd>Salınan: az sönümlü (karmaşık kök). Aşmadan en hızlı: kritik. En yavaş: aşırı sönümlü.</dd>
+        <dt>Kritik neden en hızlı?</dt><dd>R daha küçükse hedefi geçer ve salınım yüzünden geç yerleşir. R daha büyükse yavaş kök sıfıra yaklaşır ve geç varır. İkisinin tam sınırı kritiktir.</dd>
+        <dt>R artınca ne olur?</dt><dd>ζ = (R/2)√(C/L) büyür. Aşma azalır. ζ &gt; 1'de salınım yok ama yanıt yavaşlar. ω<sub>0</sub> değişmez, çünkü R'ye bağlı değil.</dd>
+        <dt>Enerji açısından ne oluyor?</dt><dd>Enerji C (½CV²) ile L (½Li²) arasında gidip gelir; bu salınımdır. R her turda R·i² kadarını ısıya çevirir. R büyüdükçe enerji salınım tamamlanmadan biter.</dd>
+        <dt>f<sub>0</sub> ile f<sub>d</sub> farkı?</dt><dd>f<sub>0</sub> sönümsüz frekanstır (R = 0). f<sub>d</sub> = f<sub>0</sub>√(1 − ζ²) ekranda gördüğün salınımın frekansıdır. ζ = 0.5'te f<sub>d</sub> = 0.866·f<sub>0</sub>.</dd>
+        <dt>Jeneratörün 50 Ω'u?</dt><dd>R1'e seri eklenir, toplam R'yi büyütür. O yüzden R1 = R − 50 Ω takılır. Takılmazsa az sönümlüde aşma %${n(U.os, 1)} yerine %${n(stepTh(U.R + 50, v.L, v.C).os, 1)} çıkar.</dd>
+        <dt>T<sub>d</sub>'yi neden tepe → çukur ile ölçtün?</dt><dd>Her yarım salınım bir öncekinin %${n(U.os, 1)}'i. İkinci tepe sadece +%${n(U.os ** 3 / 1e4, 2)}, ekranda görünmez. Tepe → çukur = T<sub>d</sub>/2.</dd>
+        <dt>Çıkış neden V<sub>SQ</sub>'ya oturuyor?</dt><dd>H(0) = 1. DC'de devre bir alçak geçirendir ve kazancı 1'dir.</dd>
+        <dt>Hata kaynakları?</dt><dd>Direnç toleransı, jeneratörün 50 Ω'u ve bobinin kendi direnci (hepsi R'ye eklenir). Kaynağın sonlu yükselme süresi. Osiloskobun 8 bit çözünürlüğü (±%2 bandı birkaç basamak) ve imleç konumu. L ve C toleransı. Prob kapasitesi.</dd>
+      </dl>`)}
+
+      ${SEC('9', 'Lab\'da tuş tuş ne yapacaksın', '▶ Sadece sırayla yap. Her satır tek iş. 👀 = ekranda ne görmelisin, ✍️ = nereye yazacaksın.', (() => {
+        const vd = fmt(State.VDIV[vIdx4()] * 10, 'V'), lo = n(0.98 * V, 2), hi = n(1.02 * V, 2);
+        const L = (t, see) => `<li>${t}${see ? `<div class="see">👀 ${see}</div>` : ''}</li>`;
+        const W = (t) => `<li class="wr">✍️ ${t}</li>`;
+        const meas = (what, side) => `<b>Measure</b> tuşuna bas → ekranın <b>altındaki 1. tuşa</b> (Add Measurement) bas → <b>sağdaki 4. tuşa</b> (Source1) basarak <b>CH2</b> yap → <b>sağdaki 1. tuşa</b> (V/I) bas → <b>VARIABLE</b> düğmesini çevir, listede <b>${what}</b>'a gel → <b>Select</b>'e bas.`;
+        const ts = `
+          ${L('<b>Cursor</b> tuşuna bas → ekranın <b>altındaki 1. tuşa</b> (H Cursor) bas.', 'ekranda iki dikey çizgi çıkar.')}
+          ${L('Ekranın <b>altındaki 3. tuşa</b> (Source) bas → sağdan <b>CH2</b>\'yi seç.', 'sol üstte küçük bir kutu var, ① ve ② satırlarında birer zaman ve birer volt yazar.')}
+          ${L('<b>VARIABLE</b> düğmesini çevir → ① çizgisini <b>sarının dik yükseldiği yere</b> getir.')}
+          ${L('<b>Select</b>\'e bas (artık ② çizgisi hareket eder).')}
+          ${L(`<b>VARIABLE</b>'ı çevir → ② çizgisini yavaş yavaş sağa götür. Kutudaki <b>② satırının voltuna</b> bak. Volt <b>${lo} ile ${hi}</b> arasına girip <b>bir daha dışına çıkmadığı ilk yerde dur</b>.`, 'mavi çizgi o noktadan sonra dümdüz.')}`;
+        const sw = (name, rTxt, extra, post = '') => `
+          <h4>${name}</h4><ol class="bstep">
+          ${L(`Jeneratörün çıkışını kapat (Output). Eski direnci çıkar, <b>${rTxt}</b> direnci aynı yere tak. Çıkışı tekrar aç.`)}
+          ${extra}
+          ${ts}
+          ${W(`Kutudaki <b>Δ</b> yazan süre = <b>yerleşme süresi</b>. Tabloya yaz.`)}
+          ${post}
+          ${L('Ekranın solundaki <b>Hardcopy</b> tuşuna bas (resim kaydedilir, rapora koyacaksın).')}
+          </ol>`;
+        return `
+        <h4>A) Devreyi kur</h4><ol class="bstep">
+          ${L('Breadboard\'a sırayla tak: <b>direnç → bobin → kondansatör</b>. Uç uca, zincir gibi.')}
+          ${L('Jeneratörün <b>kırmızı</b> kablosunu direncin boştaki ucuna, <b>siyah</b> kablosunu kondansatörün boştaki ucuna tak. Bu siyah uç = <b>toprak</b>.')}
+          ${L('<b>Sarı prob</b> (CH1) ucunu jeneratörün kırmızı kablosunun olduğu yere tak.')}
+          ${L('<b>Mavi prob</b> (CH2) ucunu <b>bobin ile kondansatörün birleştiği yere</b> tak.')}
+          ${L('İki probun da <b>siyah timsahını</b> toprağa (jeneratörün siyah kablosu) tak.')}
+        </ol>
+        <h4>B) Jeneratörü ayarla</h4><ol class="bstep">
+          ${L('Dalga şeklini <b>kare</b> (⊓⊔) seç.')}
+          ${L('Frekansı <b>5 kHz</b> yap.')}
+          ${L(`Genliği (Ampl) <b>${V} Vpp</b> yap.`)}
+          ${L(`Ofseti (Offset) <b>${V / 2} V</b> yap.`)}
+          ${L('Çıkışı aç (<b>Output</b> tuşu, ışığı yanar).')}
+        </ol>
+        <h4>C) Osiloskobu ayarla</h4><ol class="bstep">
+          ${L('<b>CH2</b> tuşuna bas.', 'CH2 tuşu mavi yanar.')}
+          ${L('<b>Autoset</b> tuşuna bas.', 'sarı kare dalga ve mavi dalga çıkar.')}
+          ${L(`Sarıya bak: altı <b>0 V</b>, üstü <b>${V} V</b> olmalı. Değilse jeneratörün genliğini/ofsetini düzelt.`)}
+          ${L('HORIZONTAL bölümündeki <b>SCALE</b> düğmesini çevir → ekranın altında <b>10µs</b> yazana kadar.')}
+          ${L('HORIZONTAL <b>POSITION</b> düğmesini çevir → sarının dik yükselişi ekranın <b>soldan 2. çizgisine</b> gelene kadar.')}
+          ${L(`<b>CH1 SCALE</b> ve <b>CH2 SCALE</b> düğmelerini çevir → ikisi de <b>${vd}</b> olsun.`)}
+          ${L('İki <b>POSITION</b> düğmesini çevir → sarı ve mavinin alt çizgisi <b>aynı yerde</b>, ekranın altına yakın olsun.', 'sarı dik çıkıyor, mavi onun arkasından çıkıyor.')}
+        </ol>
+        ${sw('D) Az sönümlü — hocanın verdiği küçük direnç (≈ 470 Ω)', 'küçük', `
+          ${L(meas('Max'), 'ekranın altında "CH2 Max" ve bir volt değeri çıkar.')}
+          ${L(meas('ROVShoot'), 'ekranın altında "CH2 ROVShoot" ve bir yüzde çıkar.')}
+          ${L('<b>Menu Off</b>\'a bas.', 'mavi dalga önce sarıyı geçiyor, sonra aşağı yukarı sallanıp duruyor.')}
+          ${W('<b>CH2 Max</b> değerini → <b>Vo,peak</b> satırına yaz.')}
+          ${W('<b>CH2 ROVShoot</b> değerini → <b>overshoot (%)</b> satırına yaz.')}`, `
+          ${L('<b>VARIABLE</b> + <b>Select</b> ile: ① çizgisini <b>mavinin en tepesine</b>, ② çizgisini <b>hemen sonraki en dip noktaya</b> getir.')}
+          ${W('Kutudaki <b>Δ</b> süresini <b>2 ile çarp</b> → bu <b>Td</b> (salınım periyodu). Not al.')}`)}
+        ${sw('E) Kritik sönümlü — orta direnç (≈ 1 kΩ)', 'orta', L('Bak: mavi artık sarıyı <b>geçmiyor</b>, sallanmıyor.'))}
+        ${sw('F) Aşırı sönümlü — büyük direnç (≈ 1.8 kΩ)', 'büyük', L('Bak: mavi <b>yavaş yavaş</b> çıkıyor.'))}
+        <h4>G) Bitir</h4><ol class="bstep">
+          ${W('Taktığın üç direncin değerini yaz (Runder, Rover satırları).')}
+          ${W('Ölçtüklerini Table 1\'in <b>Experimental</b> sütununa yaz. Teorik sütun aynı kalır.')}
+        </ol>`;
+      })())}
+    </div>`;
+  }
+  ACT.printBrief = () => {
+    const w = window.open('', '_blank'); if (!w) return note('Açılır pencere engellendi — tarayıcıda izin ver.', 'warn');
+    const body = briefHtml().replace(/<span class="acts">[\s\S]*?<\/span>/, '');
+    w.document.write(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Lab 4 Brifingi<\/title><style>
+      body{font:13px/1.5 Segoe UI,Arial,sans-serif;color:#111;max-width:820px;margin:18px auto;padding:0 14px}
+      h2{margin:0 0 6px} h3{margin:0 0 6px;font-size:15px} .lead{font-size:13.5px}
+      .sec{border:1px solid #bbb;border-radius:8px;padding:8px 12px;margin:10px 0;break-inside:avoid}
+      .sno{display:inline-block;width:20px;height:20px;border-radius:10px;background:#111;color:#fff;text-align:center;line-height:20px;font-size:12px;margin-right:6px}
+      .cmd{border-left:4px solid #d48a00;padding:3px 8px;margin:4px 0;font-weight:600;background:#fff6e5}
+      .drv{font-family:Cambria,Georgia,serif;font-size:13.5px;line-height:1.7;padding:2px 8px}
+      .key{font-family:Cambria,Georgia,serif;font-size:14.5px;border:2px solid #111;border-radius:6px;padding:5px 10px;margin:6px 0;text-align:center}
+      table{border-collapse:collapse;margin:4px 0} td,th{border:1px solid #ccc;padding:3px 7px;text-align:left}
+      dt{font-weight:700;margin-top:6px} dd{margin:1px 0 4px 14px} .muted{color:#555;font-size:12px}
+      .cu{color:#c25e00}.cc{color:#16843a}.co{color:#6b3fb3} h4{margin:10px 0 4px} .bstep li{margin:3px 0} .see{color:#555;font-size:12px} .wr{list-style:none;margin-left:-16px;font-weight:600}<\/style><\/head><body>${body}<\/body><\/html>`);
+    w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
+  };
+
   /* ---------------- teorik hesaplar sekmesi ---------------- */
   const cstep = (no, title, body, res) => `<div class="cstep"><div class="ch"><span class="no">${no}</span>${title}</div>${body}${res ? `<div class="res">✅ ${res}</div>` : ''}</div>`;
   const sci = (v) => { if (!v) return '0'; const e = Math.floor(Math.log10(Math.abs(v))); return e >= -3 && e <= 4 ? String(+v.toPrecision(4)) : `${+(v / 10 ** e).toPrecision(4)} × 10<sup>${e}</sup>`; };
@@ -5182,6 +6030,7 @@ const Guide = (() => {
   function calcHtml() {
     if (!D()) return noCircuit();
     if (isDiff()) return diffCalc();
+    if (isRlc()) return rlcCalc();
     const d = D();
     if (hidden() && !dat().checked) return `<h2>🧮 Teorik hesaplamalar — ${d.title}</h2>${B('warn', 'Test devresi: hesaplar, "Kontrol et"ten ya da "Kılavuzu aç"tan sonra görünür.')}`;
     const f = F0(), w = 2 * Math.PI * f, t = theory(f);
@@ -5241,6 +6090,7 @@ const Guide = (() => {
   /* ---------------- tablolar ---------------- */
   function tablesInner(testMode) {
     if (isDiff()) return diffTables();
+    if (isRlc()) return rlcTables();
     const th = theory(F0()), T = dat(), hide = (testMode || hidden()) && !T.checked;
     if (!th) return '<p>Teori hesaplanamadı (devre eksik mi?).</p>';
     const row = (lbl, k, thv, f) => {
@@ -5271,16 +6121,17 @@ const Guide = (() => {
     const si = senseInfo();
     return `<h2>📋 Tablolar — ${D().title}</h2>
       <p>Ölçümleri buraya kaydet; teoriyle farkı otomatik hesaplanır. Değerleri elle de yazabilirsin. Her devrenin tabloları ayrı saklanır.</p>
-      ${isDiff() ? viSel2() : ''}
+      ${isDiff() ? viSel2() : ''}${isRlc() ? viSel4() : ''}
       ${D().id === 'wien' ? `<p>Vi,pp seçimi: <select id="viSel" class="ui">${[4, 8, 12].map(v => `<option ${store.vi === v ? 'selected' : ''}>${v}</option>`).join('')}</select> V</p>` : ''}
       ${hidden() && !dat().checked ? B('warn', 'Test devresi: teorik değerler 🔒 gizli. Lab sekmesinde "Kontrol et"e basınca açılır.') : ''}
       ${tablesInner(false)}
       <p>${acts(doit('cap1', '📥 Ekrandan al (Tablo 1)'), `<button data-do="copy1">📄 Tablo 1 kopyala</button>`, `<button data-do="copy2">📄 Tablo 2 kopyala</button>`, `<button data-do="csv">⬇ CSV indir</button>`, `<button data-do="clearTables">🗑 Temizle</button>`)}</p>
-      ${isDiff() ? B('tip', '<b>Ekrandan al</b>: jeneratör 1 kHz sinüsteyse Vo,peak; 100 Hz üçgendeyse iki Vo seviyesini kaydeder. Tarama satırları için ▶ / 📥.') : B('tip', `Vi, Vo, kazanç ve faz: CH1 = Vi, CH2 = Vo düzeninde al. Akım: ${si ? (si.single ? `CH2 ${si.hi}'da iken` : `CH2 ${si.lo}'da ve Math (CH1 − CH2) açıkken`) : ''} "Ekrandan al".`)}
-      ${isDiff() ? '' : B('why', 'Faz için yüzde yerine derece farkı yazılır: φ sıfıra yakınken küçük bir sapma bile çok büyük yüzde çıkar ve yanıltır.')}`;
+      ${isRlc() ? B('tip', '<b>Ekrandan al</b>: R1 az sönümlü değerdeyken CH2 Max ve ROVShoot ölçümlerini (tepe, aşma, ζ, Rcrit) kaydeder; yatay imleçler açıksa yerleşme süresini kaydeder. Değerleri elle de yazabilirsin. Experimental sütunu laboratuvar içindir.') : isDiff() ? B('tip', '<b>Ekrandan al</b>: jeneratör 1 kHz sinüsteyse Vo,peak; 100 Hz üçgendeyse iki Vo seviyesini kaydeder. Tarama satırları için ▶ / 📥.') : B('tip', `Vi, Vo, kazanç ve faz: CH1 = Vi, CH2 = Vo düzeninde al. Akım: ${si ? (si.single ? `CH2 ${si.hi}'da iken` : `CH2 ${si.lo}'da ve Math (CH1 − CH2) açıkken`) : ''} "Ekrandan al".`)}
+      ${isDiff() || isRlc() ? '' : B('why', 'Faz için yüzde yerine derece farkı yazılır: φ sıfıra yakınken küçük bir sapma bile çok büyük yüzde çıkar ve yanıltır.')}`;
   }
   function tableText(n) {
     if (isDiff()) return diffText(n);
+    if (isRlc()) return rlcText(n);
     const th = theory(F0()), T = dat().t1, x = (v, f) => isFinite(v) ? f(v) : '';
     const p = (v) => fph(v).replace('°', '');
     if (n === 1) return ['Parameter\tTheoretical\tMeasurement',
@@ -5398,6 +6249,7 @@ const Guide = (() => {
   function theoryHtml() {
     if (!D()) return noCircuit();
     if (isDiff()) return diffTheory();
+    if (isRlc()) return rlcTheory();
     const d = D(), inf = I();
     if (hidden() && !dat().checked) return `<h2>🧠 Teori — ${d.title}</h2>${B('warn', 'Test devresi: teori, "Kontrol et"ten ya da "Kılavuzu aç"tan sonra görünür.')}${B('simple', inf.simple)}`;
     const fc = Circuits.charFreq();
@@ -5421,6 +6273,7 @@ const Guide = (() => {
       ${B('tip', 'Teorik değerler tezgâhtaki devreden (fazör/AC analizle) hesaplanır. Bir bileşenin değerini değiştirirsen teori de değişir.')}`;
   }
   function calc() {
+    if (isRlc()) return calc4();
     const g = (id) => { const e = document.getElementById(id); return e ? Units.parse(e.value) : NaN; };
     const f = g('cF'), V = g('cV');
     const o = (id, t) => { const el = document.getElementById(id); if (el) el.innerHTML = t; };
@@ -5446,11 +6299,11 @@ const Guide = (() => {
   const noCircuit = () => `<h2>Kılavuz yok</h2>${B('simple', 'Bu tezgâhtaki devre için hazır bir kılavuz yok (serbest çalışma). Kılavuzlu bir devre için 📚 Devreler\'den seç.')}<p>${acts(doit('library', '📚 Devre kütüphanesini aç'))}</p>`;
 
   /* ---------------- panel çizimi ---------------- */
-  const TABS = [['lab', '🧪 Lab'], ['tables', '📋 Tablolar'], ['howto', '🎯 Nasıl?'], ['keys', '🎛️ Tuşlar'], ['theory', '🧠 Teori'], ['calc', '🧮 Teorik hesaplar'], ['specs', '📘 Cihaz']];
+  const TABS = [['lab', '🧪 Lab'], ['brief', '🎖️ Brifing'], ['tables', '📋 Tablolar'], ['howto', '🎯 Nasıl?'], ['keys', '🎛️ Tuşlar'], ['theory', '🧠 Teori'], ['calc', '🧮 Teorik hesaplar'], ['specs', '📘 Cihaz']];
   let tabsEl, bodyEl, STEPS = [];
   function init() {
     tabsEl = document.getElementById('gTabs'); bodyEl = document.getElementById('gBody');
-    tabsEl.innerHTML = TABS.map(([k, n]) => `<button data-tab="${k}">${n}</button>`).join('');
+    drawTabs();
     tabsEl.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) { store.tab = b.dataset.tab; save(); render(); bodyEl.scrollTop = 0; } });
     bodyEl.addEventListener('click', onClick);
     bodyEl.addEventListener('change', onChange);
@@ -5491,7 +6344,15 @@ const Guide = (() => {
       <h2>${st.t}</h2>${st.html()}
       <div style="display:flex;justify-content:space-between;margin-top:14px">${i > 0 ? '<button class="ui" data-step="-1">◀ Önceki</button>' : '<span></span>'}${i < STEPS.length - 1 ? '<button class="ui primary" data-step="1">Sonraki ▶</button>' : '<button class="ui primary" data-do="next">Sonraki devre ▶</button>'}</div>`;
   }
+  /** Brifing sekmesi yalnız Lab 4'te görünür */
+  let tabsKey = '';
+  function drawTabs() {
+    const list = TABS.filter(([k]) => k !== 'brief' || isRlc()), key = list.map(t => t[0]).join();
+    if (key !== tabsKey) { tabsKey = key; tabsEl.innerHTML = list.map(([k, n]) => `<button data-tab="${k}">${n}</button>`).join(''); }
+  }
   function render(quiet) {
+    drawTabs();
+    if (store.tab === 'brief' && !isRlc()) store.tab = 'lab';
     tabsEl.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.tab === store.tab));
     let h = '';
     try {
@@ -5501,6 +6362,7 @@ const Guide = (() => {
       else if (store.tab === 'keys') h = keysHtml();
       else if (store.tab === 'theory') h = theoryHtml();
       else if (store.tab === 'calc') h = calcHtml();
+      else if (store.tab === 'brief') h = briefHtml();
       else h = specsHtml();
     } catch (e) { console.error(e); h = `<p>Kılavuz çizilemedi: ${e.message}</p>`; }
     bodyEl.innerHTML = `<div class="${quiet ? '' : 'fade'}">${h}</div>`;
@@ -5523,6 +6385,10 @@ const Guide = (() => {
     const t = e.target;
     if (t.id === 'viSel') { store.vi = +t.value; save(); render(); }
     if (t.id === 'viSel2') { store.vi2 = +t.value; save(); render(); }
+    if (t.id === 'viSel4') { store.vsq4 = +t.value; save(); if (isRlc() && fg() && fg().wave === 'square') ACT.fgSq4(); render(); }
+    if (t.id === 'rgSel4') { store.rg4 = t.value; save(); const k = caseNow(); if (k) setR4(k); else render(); }
+    if (t.dataset.x) { const v = Units.parse(t.value); if (isFinite(v)) dat4().x[t.dataset.x] = v; else delete dat4().x[t.dataset.x]; save(); render(); }
+    if (t.dataset.ex) { const v = Units.parse(t.value); if (isFinite(v)) dat4().ex[t.dataset.ex] = v; else delete dat4().ex[t.dataset.ex]; save(); render(); }
     if (t.dataset.t1) { const v = Units.parse(t.value); if (isFinite(v)) dat().t1[t.dataset.t1] = v; else delete dat().t1[t.dataset.t1]; save(); render(); }
     if (t.dataset.t2) { const v = parseFloat(String(t.value).replace(',', '.')); if (isFinite(v)) dat().t2[t.dataset.t2] = v; else delete dat().t2[t.dataset.t2]; save(); render(); }
     if (t.dataset.fchar) { const v = Units.parse(t.value); if (isFinite(v)) dat().fchar = v; else delete dat().fchar; save(); render(); }
@@ -5583,7 +6449,7 @@ const Guide = (() => {
     if (fr && rec && !rec.roll) {
       const cyc = fr * 10 * State.tdiv();
       if (cyc > 25) return { key: 'many', lvl: '', icon: '↔️', text: `Ekranda ~${Math.round(cyc)} dalga var, çok sık. HORIZONTAL <b>SCALE</b> düğmesini saat yönünde çevir: 2–4 dalga ideal.`, acts: [['👁 Göster', 'show:hscale']] };
-      if (cyc < 0.9) return { key: 'few', lvl: '', icon: '↔️', text: 'Ekranda bir tam dalga bile yok. HORIZONTAL <b>SCALE</b> düğmesini saat yönünün tersine çevir ya da en kolayı <b>Autoset</b>.', acts: [['⚡ Autoset', 'do:autoset'], ['👁 Göster', 'show:hscale']] };
+      if (cyc < 0.9 && !isRlc()) return { key: 'few', lvl: '', icon: '↔️', text: 'Ekranda bir tam dalga bile yok. HORIZONTAL <b>SCALE</b> düğmesini saat yönünün tersine çevir ya da en kolayı <b>Autoset</b>.', acts: [['⚡ Autoset', 'do:autoset'], ['👁 Göster', 'show:hscale']] };
     }
     if (performance.now() - genT > 11000) { genT = performance.now(); genIdx = (genIdx + 1) % GENERIC.length; }
     return { key: 'g' + genIdx, lvl: '', icon: '💡', text: GENERIC[genIdx] };
@@ -5619,7 +6485,7 @@ const Guide = (() => {
     if (t - tipT > 600) { tipT = t; renderTip(); }
   }
 
-  return { init, tick, toggle, show: showTab, render, theory, ACT, CHK, loadCircuit, openLibrary, note, get circuit() { return store.circuit; }, get STEPS() { return STEPS; } };
+  return { init, tick, toggle, show: showTab, render, theory, ACT, CHK, rlcScan, loadCircuit, openLibrary, note, get circuit() { return store.circuit; }, get STEPS() { return STEPS; } };
 })();
 
 /* =====================================================================

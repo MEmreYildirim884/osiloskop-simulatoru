@@ -18,7 +18,7 @@ for (const d of Circuits.DEFS) {
   Circuits.setCurrent(d.id); Circuits.build(d.id);
   const S=State.S; S.ch[0].on=true; S.ch[1].on=true; S.ch[0].atten=S.ch[1].atten=10;
   const out=[];
-  for (const f of [d.f, d.sweep[0], d.sweep[d.sweep.length-1]]) {
+  for (const f of (d.sweep.length ? [d.f, d.sweep[0], d.sweep[d.sweep.length-1]] : [d.f])) {
     const fg=Bench.model.comps.find(c=>c.type==='FG'); fg.freq=f; Bench.changed();
     const ok=Acq.autoset(); run(40);
     const r1=val('Cycle RMS','CH1'), r2=val('Cycle RMS','CH2'), ph=val('Phase','CH1','CH2');
